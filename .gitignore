@@ -60,6 +60,7 @@ frontend/.next/
 frontend/out/
 frontend/build/
 frontend/.swc/
+frontend/.turbo/
 
 # Database
 *.db
@@ -179,3 +180,24 @@ market_data/
 # Process files
 *.pid
 server.pid
+.dev_pids
+
+# Development artifacts
+frontend/CANDLESTICK_DEBUG.md
+frontend/README.md
+frontend/REALTIME_CHARTS.md
+
+# Optimized structure excludes
+# (These files have been cleaned up)
+frontend/components/charts/AdvancedTradingChart.tsx
+frontend/components/charts/AlternativeChart.tsx
+frontend/components/charts/BackupWorkingChart.tsx
+frontend/components/charts/BasicCandlestickChart.tsx
+frontend/components/charts/DebugCandlestickChart.tsx
+frontend/components/charts/DebugTestChart.tsx
+frontend/components/charts/FinalCandlestickChart.tsx
+frontend/components/charts/GuaranteedChart.tsx
+frontend/components/charts/SimpleTradingChart.tsx
+frontend/components/charts/TradingChart.tsx
+frontend/components/charts/UltimateTestChart.tsx
+frontend/components/charts/WorkingTradingChart.tsx

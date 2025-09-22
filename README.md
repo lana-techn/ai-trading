@@ -149,24 +149,53 @@ pnpm test                # Run tests
 ### Quick Testing
 ```bash
 # Test your setup
-./test_setup.sh          # Verify migration and configuration
+./scripts/test_setup.sh   # Verify migration and configuration
 ```
 
 ## 🔧 Development
 
 ### Project Structure
 ```
-ai-trading/
-├── frontend/                # Next.js frontend application
-│   ├── app/                # Next.js 13+ app directory
-│   ├── components/         # Reusable React components
-│   └── lib/                # Utility functions and API
-├── backend/                # FastAPI backend application
+ai-trading-agent/
+├── 📁 backend/              # FastAPI backend
+│   ├── 📁 app/             # Main application
+│   │   ├── 📁 core/        # Core configurations  
+│   │   ├── 📁 services/    # Business logic services
+│   │   └── 📁 utils/       # Utility functions
 │   ├── minimal_server.py   # Development server
 │   └── requirements.txt    # Python dependencies
-├── start_servers.sh        # Automated server startup
-└── README.md              # Project documentation
+├── 📁 frontend/            # Next.js frontend
+│   ├── 📁 app/            # Next.js 15 app directory
+│   ├── 📁 components/     # React components (optimized)
+│   │   ├── 📁 charts/     # Trading charts (3 components)
+│   │   ├── 📁 chat/       # AI chat interface
+│   │   └── 📁 ui/         # Base UI components
+│   └── 📁 lib/            # Utilities and API
+├── 📁 docs/               # Documentation
+│   ├── SETUP_GUIDE.md     # Detailed setup
+│   └── QUICKSTART.md      # Quick start guide  
+├── 📁 scripts/            # Utility scripts
+│   └── test_setup.sh      # Setup verification
+├── dev.sh                 # 🌟 Main development script
+├── package.json           # Root workspace config
+├── pnpm-workspace.yaml    # pnpm workspace
+├── README.md              # Main documentation
+├── Warp.md               # 🤖 AI assistant guide
+└── .gitignore            # Git ignore rules
 ```
+
+### ✨ Project Optimizations
+
+**🧹 Cleaned Structure:**
+- Removed 12+ redundant chart components
+- Consolidated scripts into organized folders
+- Removed debug files and build artifacts
+- Optimized documentation structure
+
+**⚡ Performance Improvements:**
+- Migrated to pnpm for faster installs
+- Enhanced development scripts with process management
+- Cleaned build caches and temporary files
 
 ### Testing
 
