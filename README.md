@@ -34,7 +34,7 @@
 ### Prerequisites
 - Python 3.9+
 - Node.js 18+
-- npm or yarn
+- pnpm (recommended) or npm
 
 ### Installation
 
@@ -46,6 +46,10 @@
 
 2. **Install dependencies**
    ```bash
+   # Option 1: Automated installation (Recommended)
+   pnpm install:all
+   
+   # Option 2: Manual installation
    # Backend dependencies
    cd backend
    pip3 install -r requirements.txt
@@ -53,21 +57,24 @@
    
    # Frontend dependencies
    cd ../frontend
-   npm install
+   pnpm install
    cd ..
    ```
 
 3. **Start the application**
    ```bash
-   # Option 1: Automated script (Recommended)
+   # Option 1: Optimized development script (Recommended)
+   ./dev.sh
+   
+   # Option 2: Using pnpm scripts
+   pnpm dev
+   
+   # Option 3: Start individual services
+   ./dev.sh frontend    # Frontend only
+   ./dev.sh backend     # Backend only
+   
+   # Option 4: Legacy scripts (still available)
    ./start_servers.sh
-   
-   # Option 2: Manual start
-   # Terminal 1: Backend
-   ./start_backend.sh
-   
-   # Terminal 2: Frontend
-   ./start_frontend.sh
    ```
 
 4. **Access the application**
@@ -107,6 +114,42 @@ DEBUG=true
 ENVIRONMENT=development
 HOST=0.0.0.0
 PORT=8000
+```
+
+## ⚡ Available Commands
+
+### Development Scripts
+```bash
+# Start development environment
+./dev.sh                 # Start both frontend and backend
+pnpm dev                 # Alternative using pnpm
+
+# Individual services
+./dev.sh frontend        # Start only frontend (port 3000)
+./dev.sh backend         # Start only backend (port 8000)
+
+# Utility commands
+./dev.sh status          # Check server status
+./dev.sh stop            # Stop all servers
+./dev.sh clean           # Clean dependencies and restart
+./dev.sh help            # Show help message
+
+# Package management
+pnpm install:all         # Install both backend and frontend deps
+pnpm frontend:install    # Install only frontend dependencies
+pnpm backend:install     # Install only backend dependencies
+
+# Build and production
+pnpm build               # Build frontend for production
+pnpm start               # Start production build
+pnpm lint                # Run linting
+pnpm test                # Run tests
+```
+
+### Quick Testing
+```bash
+# Test your setup
+./test_setup.sh          # Verify migration and configuration
 ```
 
 ## 🔧 Development

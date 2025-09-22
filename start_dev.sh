@@ -25,7 +25,14 @@ sleep 3
 # Start frontend server
 echo "🎨 Starting frontend server (port 3000)..."
 cd ../frontend
-npm run dev &
+
+# Install dependencies if needed
+if [[ ! -d "node_modules" ]]; then
+    echo "Installing dependencies with pnpm..."
+    pnpm install
+fi
+
+pnpm dev &
 FRONTEND_PID=$!
 
 # Wait a moment for frontend to start

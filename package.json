@@ -1,0 +1,39 @@
+{
+  "name": "ai-trading-agent",
+  "version": "1.0.0",
+  "description": "AI-powered trading analysis platform with Next.js frontend and FastAPI backend",
+  "scripts": {
+    "dev": "./dev.sh",
+    "start": "./dev.sh start",
+    "frontend": "./dev.sh frontend",
+    "backend": "./dev.sh backend",
+    "stop": "./dev.sh stop",
+    "status": "./dev.sh status",
+    "clean": "./dev.sh clean",
+    "frontend:install": "cd frontend && pnpm install",
+    "frontend:build": "cd frontend && pnpm build",
+    "frontend:start": "cd frontend && pnpm start",
+    "backend:install": "cd backend && pip install -r requirements.txt",
+    "backend:start": "cd backend && python3 minimal_server.py",
+    "install:all": "pnpm run backend:install && pnpm run frontend:install",
+    "build": "pnpm run frontend:build",
+    "lint": "cd frontend && pnpm lint",
+    "test": "cd frontend && pnpm test"
+  },
+  "keywords": [
+    "trading",
+    "ai",
+    "analysis",
+    "nextjs",
+    "fastapi",
+    "gemini",
+    "trading-bot"
+  ],
+  "author": "AI Trading Agent Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@10.7.0"
+}
