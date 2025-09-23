@@ -560,14 +560,14 @@ Or use the quick action buttons for instant analysis!`;
           transition-all duration-300 ease-in-out
         ">
           {/* Chat Header */}
-          <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-t-2xl">
+          <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-500 to-blue-600 dark:from-purple-600 dark:to-blue-700 text-white rounded-t-2xl transition-all duration-300">
             <div className="relative">
               <BrainIcon className="h-8 w-8" />
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse" />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 dark:bg-green-500 rounded-full border-2 border-white dark:border-gray-900 animate-pulse transition-colors duration-300" />
             </div>
             <div>
               <h3 className="font-bold text-lg">AI Trading Assistant</h3>
-              <p className="text-sm opacity-90">
+              <p className="text-sm opacity-90 transition-opacity duration-300">
                 {isTyping ? 'Typing...' : 'Online • Ready to help'}
               </p>
             </div>
@@ -585,26 +585,26 @@ Or use the quick action buttons for instant analysis!`;
               >
                 <div
                   className={`
-                    max-w-[80%] rounded-2xl p-3 text-sm
+                    max-w-[80%] rounded-2xl p-3 text-sm transition-all duration-300
                     ${message.type === 'user'
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white ml-4'
-                      : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 mr-4 shadow-md'
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white ml-4 shadow-lg shadow-blue-500/20 dark:shadow-blue-600/30'
+                      : 'bg-white/90 dark:bg-gray-800/90 text-gray-800 dark:text-gray-100 mr-4 shadow-md backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50'
                     }
                     ${message.isTyping ? 'animate-pulse' : ''}
                   `}
                 >
                   {message.isTyping ? (
                     <div className="flex space-x-2">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce transition-colors duration-300"></div>
+                      <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce transition-colors duration-300" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce transition-colors duration-300" style={{ animationDelay: '0.2s' }}></div>
                     </div>
                   ) : (
                     <div className="whitespace-pre-wrap">{message.content}</div>
                   )}
                   
                   {message.type === 'ai' && !message.isTyping && (
-                    <div className="text-xs opacity-70 mt-2 flex items-center gap-2">
+                    <div className="text-xs opacity-70 mt-2 flex items-center gap-2 text-gray-500 dark:text-gray-400 transition-colors duration-300">
                       <BrainIcon className="h-3 w-3" />
                       {message.timestamp.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                     </div>
@@ -617,7 +617,7 @@ Or use the quick action buttons for instant analysis!`;
 
           {/* Quick Actions */}
           {!isLoading && messages.length > 0 && (
-            <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="p-3 border-t border-gray-200/50 dark:border-gray-700/50 bg-gray-50/30 dark:bg-gray-800/30 backdrop-blur-sm transition-all duration-300">
               <div className="grid grid-cols-2 gap-2 mb-3">
                 {QUICK_ACTIONS.map((action, index) => (
                   <button
@@ -642,14 +642,14 @@ Or use the quick action buttons for instant analysis!`;
 
           {/* Suggested Questions */}
           {messages.length === 1 && (
-            <div className="p-3 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">💡 Suggested questions:</p>
+            <div className="p-3 border-t border-gray-200/50 dark:border-gray-700/50 bg-blue-50/30 dark:bg-blue-900/10 backdrop-blur-sm transition-all duration-300">
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 font-medium transition-colors duration-300">💡 Suggested questions:</p>
               <div className="space-y-1">
                 {SUGGESTED_QUESTIONS.slice(0, 2).map((question, index) => (
                   <button
                     key={index}
                     onClick={() => handleSuggestedQuestion(question)}
-                    className="w-full text-left p-2 text-xs bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors text-blue-700 dark:text-blue-300"
+                    className="w-full text-left p-2 text-xs bg-blue-50/80 dark:bg-blue-900/30 hover:bg-blue-100/90 dark:hover:bg-blue-900/50 rounded-lg transition-all duration-300 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50 hover:border-blue-300/70 dark:hover:border-blue-700/70 backdrop-blur-sm"
                   >
                     {question}
                   </button>
@@ -659,7 +659,7 @@ Or use the quick action buttons for instant analysis!`;
           )}
 
           {/* Input Area */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-b-2xl">
+          <div className="p-4 border-t border-gray-200/50 dark:border-gray-700/50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-b-2xl transition-all duration-300">
             <div className="flex gap-2">
               <input
                 ref={inputRef}
@@ -668,13 +668,13 @@ Or use the quick action buttons for instant analysis!`;
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Ask me about trading analysis..."
-                className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50 dark:bg-gray-800 text-sm"
+                className="flex-1 p-3 border border-gray-300/50 dark:border-gray-600/50 rounded-xl focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300"
                 disabled={isLoading}
               />
               <button
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim() || isLoading}
-                className="px-4 py-3 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-xl hover:from-purple-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="px-4 py-3 bg-gradient-to-r from-purple-500 to-blue-600 dark:from-purple-600 dark:to-blue-700 text-white rounded-xl hover:from-purple-600 hover:to-blue-700 dark:hover:from-purple-700 dark:hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-purple-500/25 dark:shadow-purple-600/30 hover:shadow-xl hover:shadow-purple-500/30 dark:hover:shadow-purple-600/40"
               >
                 {isLoading ? (
                   <RefreshCwIcon className="h-4 w-4 animate-spin" />
