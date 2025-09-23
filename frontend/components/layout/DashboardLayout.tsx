@@ -19,7 +19,7 @@ import {
   ChartPieIcon,
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { SmoothThemeToggle } from '@/components/ui/SmoothThemeToggle';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -174,7 +174,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
 
               {/* Theme Toggle */}
-              <ThemeToggle 
+              <SmoothThemeToggle 
                 variant="button" 
                 size="md" 
                 className="hidden sm:block" 

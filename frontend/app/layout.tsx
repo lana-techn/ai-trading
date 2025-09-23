@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { ThemeProvider } from '@/components/theme-provider';
+import { SmoothThemeProvider } from '@/components/providers/SmoothThemeProvider';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,17 +22,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange={false}
-          themes={['light', 'dark']}
-        >
+        <SmoothThemeProvider>
           <DashboardLayout>
             {children}
           </DashboardLayout>
-        </ThemeProvider>
+        </SmoothThemeProvider>
       </body>
     </html>
   );
