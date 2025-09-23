@@ -65,24 +65,20 @@ export default function CandlestickChart({
     }];
   }, [data, symbol]);
 
-  // Volume series with color mapping based on price movement
+  // Volume series for line chart visualization
   const volumeSeries = useMemo(() => {
     if (data.length === 0) return [];
 
     return [{
-      name: 'Volume',
-      data: data.map((item, index) => {
-        const isBullish = item.close >= item.open;
-        return {
-          x: item.timestamp,
-          y: item.volume,
-          fillColor: isBullish ? '#10b981' : '#ef4444', // Green for bullish, red for bearish
-        }
-      })
+      name: 'Volume Trend',
+      data: data.map(item => ({
+        x: item.timestamp,
+        y: item.volume
+      }))
     }];
   }, [data]);
 
-  // Enhanced Candlestick options with better colors and UX
+  // Enhanced Candlestick options
   const candlestickOptions: ApexOptions = useMemo(() => ({
     chart: {
       type: 'candlestick',
@@ -165,8 +161,8 @@ export default function CandlestickChart({
     plotOptions: {
       candlestick: {
         colors: {
-          upward: '#00d4aa', // Brighter green for bullish
-          downward: '#ff6b6b' // Softer red for bearish
+          upward: '#00d4aa',
+          downward: '#ff6b6b'
         },
         wick: {
           useFillColor: true
@@ -179,74 +175,7 @@ export default function CandlestickChart({
       opacity: 0.3
     },
     tooltip: {
-      theme: isDark ? 'dark' : 'light',
-      custom: function({ seriesIndex, dataPointIndex, w }) {
-        const o = w.globals.seriesCandleO[seriesIndex][dataPointIndex];
-        const h = w.globals.seriesCandleH[seriesIndex][dataPointIndex];
-        const l = w.globals.seriesCandleL[seriesIndex][dataPointIndex];
-        const c = w.globals.seriesCandleC[seriesIndex][dataPointIndex];
-        const timestamp = new Date(w.globals.categoryLabels[dataPointIndex]);
-        
-        const isBullish = c >= o;
-        const change = c - o;
-        const changePercent = ((change / o) * 100);
-        
-        const timeStr = timestamp.toLocaleDateString('id-ID', {
-          year: 'numeric',
-          month: 'short', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        
-        const bgColor = isBullish ? '#00d4aa' : '#ff6b6b';
-        const textColor = '#ffffff';
-        
-        return `
-          <div style="
-            background: ${bgColor};
-            color: ${textColor};
-            padding: 16px;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 13px;
-            line-height: 1.5;
-            min-width: 200px;
-          ">
-            <div style="font-weight: 700; font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-              <span>${isBullish ? '📈' : '📉'}</span>
-              <span>${symbol}</span>
-            </div>
-            <div style="margin-bottom: 8px; font-size: 12px; opacity: 0.9;">
-              ${timeStr}
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-              <div>
-                <div style="font-size: 11px; opacity: 0.8;">Open</div>
-                <div style="font-weight: 600;">$${o.toFixed(2)}</div>
-              </div>
-              <div>
-                <div style="font-size: 11px; opacity: 0.8;">Close</div>
-                <div style="font-weight: 600;">$${c.toFixed(2)}</div>
-              </div>
-              <div>
-                <div style="font-size: 11px; opacity: 0.8;">High</div>
-                <div style="font-weight: 600;">$${h.toFixed(2)}</div>
-              </div>
-              <div>
-                <div style="font-size: 11px; opacity: 0.8;">Low</div>
-                <div style="font-weight: 600;">$${l.toFixed(2)}</div>
-              </div>
-            </div>
-            <div style="padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); text-align: center;">
-              <div style="font-weight: 600;">
-                ${change >= 0 ? '+' : ''}$${change.toFixed(2)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)
-              </div>
-            </div>
-          </div>
-        `;
-      }
+      theme: isDark ? 'dark' : 'light'
     },
     responsive: [{
       breakpoint: 768,
@@ -260,10 +189,10 @@ export default function CandlestickChart({
     }]
   }), [isDark, height, symbol]);
 
-  // Enhanced Volume options with better UI/UX
+  // Enhanced Volume Line Chart options for trend visualization
   const volumeOptions: ApexOptions = useMemo(() => ({
     chart: {
-      type: 'bar',
+      type: 'line',
       height: height * 0.3,
       toolbar: {
         show: false
@@ -287,37 +216,36 @@ export default function CandlestickChart({
       mode: isDark ? 'dark' : 'light'
     },
     title: {
-      text: '📊 Trading Volume',
+      text: '📈 Volume Trend Analysis',
       style: {
         fontSize: '16px',
         fontWeight: '600',
         color: isDark ? '#f3f4f6' : '#374151'
       }
     },
-    plotOptions: {
-      bar: {
-        columnWidth: '75%',
-        borderRadius: 2,
-        distributed: true, // Enable individual colors per bar
-        colors: {
-          backgroundBarColors: [isDark ? '#1f2937' : '#f8fafc'],
-          backgroundBarOpacity: 0.3,
-        }
-      }
+    colors: ['#8b5cf6'], // Purple color for volume line
+    stroke: {
+      width: 3,
+      curve: 'smooth',
+      lineCap: 'round'
     },
-    colors: ['#10b981', '#ef4444'], // Will be overridden by individual bar colors
     fill: {
       type: 'gradient',
       gradient: {
         shade: isDark ? 'dark' : 'light',
         type: 'vertical',
         shadeIntensity: 0.3,
-        gradientToColors: undefined,
+        gradientToColors: ['#a78bfa'],
         inverseColors: false,
-        opacityFrom: 0.85,
-        opacityTo: 0.55,
-        stops: [0, 50, 100],
-        colorStops: []
+        opacityFrom: 0.4,
+        opacityTo: 0.1,
+        stops: [0, 100]
+      }
+    },
+    markers: {
+      size: 0,
+      hover: {
+        sizeOffset: 6
       }
     },
     xaxis: {
@@ -376,6 +304,8 @@ export default function CandlestickChart({
       custom: function({ series, seriesIndex, dataPointIndex, w }) {
         const value = series[seriesIndex][dataPointIndex];
         const timestamp = new Date(w.globals.categoryLabels[dataPointIndex]);
+        const dataPoint = data[dataPointIndex];
+        
         const timeStr = timestamp.toLocaleDateString('id-ID', { 
           month: 'short', 
           day: 'numeric',
@@ -389,28 +319,50 @@ export default function CandlestickChart({
         else if (value >= 1e3) volumeStr = `${(value / 1e3).toFixed(2)}K`;
         else volumeStr = value.toLocaleString();
         
-        const isBullish = data[dataPointIndex]?.close >= data[dataPointIndex]?.open;
-        const bgColor = isBullish ? '#10b981' : '#ef4444';
+        // Check if volume is increasing (trending up) or decreasing
+        const prevVolume = dataPointIndex > 0 ? data[dataPointIndex - 1]?.volume : value;
+        const volumeChange = value - prevVolume;
+        const isVolumeIncreasing = volumeChange >= 0;
+        const isBullish = dataPoint?.close >= dataPoint?.open;
+        
+        const bgColor = '#8b5cf6';
         const textColor = '#ffffff';
         
         return `
           <div style="
-            background: ${bgColor};
+            background: linear-gradient(135deg, ${bgColor}, #a78bfa);
             color: ${textColor};
-            padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 14px 18px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
             font-size: 13px;
-            line-height: 1.4;
+            line-height: 1.5;
+            min-width: 200px;
+            border: 1px solid rgba(255,255,255,0.1);
           ">
-            <div style="font-weight: 600; margin-bottom: 4px;">
-              📊 Volume: ${volumeStr}
+            <div style="font-weight: 700; font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+              <span>📈</span>
+              <span>Volume Trend</span>
             </div>
-            <div style="opacity: 0.9;">
+            <div style="margin-bottom: 10px; font-size: 12px; opacity: 0.9;">
               ${timeStr}
             </div>
-            <div style="margin-top: 4px; font-size: 11px; opacity: 0.8;">
-              ${isBullish ? '📈 Bullish' : '📉 Bearish'}
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+              <div>
+                <div style="font-size: 11px; opacity: 0.8;">Volume</div>
+                <div style="font-weight: 700; font-size: 14px;">${volumeStr}</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; opacity: 0.8;">Price Action</div>
+                <div style="font-weight: 600; font-size: 12px;">
+                  ${isBullish ? '📈 Bullish' : '📉 Bearish'}
+                </div>
+              </div>
+            </div>
+            <div style="padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); text-align: center;">
+              <div style="font-weight: 600; font-size: 12px;">
+                ${isVolumeIncreasing ? '⬆️ Volume Increasing' : '⬇️ Volume Decreasing'}
+              </div>
             </div>
           </div>
         `;
@@ -418,21 +370,6 @@ export default function CandlestickChart({
     },
     dataLabels: {
       enabled: false
-    },
-    states: {
-      hover: {
-        filter: {
-          type: 'lighten',
-          value: 0.1
-        }
-      },
-      active: {
-        allowMultipleDataPointsSelection: false,
-        filter: {
-          type: 'darken',
-          value: 0.7
-        }
-      }
     }
   }), [isDark, height, data]);
 
@@ -533,7 +470,7 @@ export default function CandlestickChart({
           <Chart
             options={volumeOptions}
             series={volumeSeries}
-            type="bar"
+            type="area"
             height={height * 0.3}
           />
         </div>
