@@ -476,8 +476,12 @@ export default function CandlestickChart({
           />
         </div>
         
-        {/* Floating AI Chatbot */}
-        <AIChatbot symbol={symbol} />
+        {/* Floating AI Chatbot with Auto-Analysis */}
+        <AIChatbot 
+          symbol={symbol} 
+          chartData={data}
+          autoAnalyze={true}
+        />
 
         {/* Enhanced Stats with Modern Design */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">

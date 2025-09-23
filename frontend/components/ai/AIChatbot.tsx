@@ -40,6 +40,8 @@ interface AIAnalysis {
 interface AIChatbotProps {
   symbol?: string;
   className?: string;
+  chartData?: any;
+  autoAnalyze?: boolean;
 }
 
 const QUICK_ACTIONS = [
@@ -56,13 +58,15 @@ const SUGGESTED_QUESTIONS = [
   "Strategi trading untuk pasar volatile?",
 ];
 
-export default function AIChatbot({ symbol, className = '' }: AIChatbotProps) {
+export default function AIChatbot({ symbol, className = '', chartData, autoAnalyze = true }: AIChatbotProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [lastAnalysisTime, setLastAnalysisTime] = useState<number>(0);
+  const [tradingOpportunityAlert, setTradingOpportunityAlert] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -97,12 +101,188 @@ I can help you with:
 • 💰 Price predictions
 • ⚠️ Risk assessment
 
-${symbol ? `Currently analyzing ${symbol}. ` : ''}What would you like to know?`,
+${symbol ? `Currently analyzing ${symbol}. ` : ''}${autoAnalyze ? 'I\'ll automatically analyze the chart for you!' : 'What would you like to know?'}`,
         timestamp: new Date(),
       };
       setMessages([welcomeMessage]);
     }
-  }, [symbol]);
+  }, [symbol, autoAnalyze]);
+  
+  // Auto-analyze when symbol changes
+  useEffect(() => {
+    if (symbol && autoAnalyze && messages.length > 0) {
+      // Add a small delay to let the chart load
+      const timer = setTimeout(() => {
+        performAutoAnalysis();
+        setLastAnalysisTime(Date.now());
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [symbol, autoAnalyze]);
+  
+  // Monitor for trading opportunities in real-time
+  useEffect(() => {
+    if (!symbol || !chartData || !Array.isArray(chartData)) return;
+    
+    const interval = setInterval(() => {
+      // Check for significant price movements or volume spikes
+      const recentData = chartData.slice(-3);
+      if (recentData.length < 3) return;
+      
+      const latestPrice = recentData[recentData.length - 1]?.close;
+      const previousPrice = recentData[recentData.length - 2]?.close;
+      const priceChangePercent = Math.abs((latestPrice - previousPrice) / previousPrice) * 100;
+      
+      const latestVolume = recentData[recentData.length - 1]?.volume;
+      const avgVolume = recentData.reduce((sum, d) => sum + d.volume, 0) / recentData.length;
+      const volumeSpike = latestVolume > avgVolume * 2;
+      
+      // Trigger alert for significant moves
+      if ((priceChangePercent > 2 || volumeSpike) && Date.now() - lastAnalysisTime > 30000) {
+        const alertType = priceChangePercent > 5 ? 'HIGH_VOLATILITY' : volumeSpike ? 'VOLUME_SPIKE' : 'PRICE_MOVE';
+        sendTradingAlert(alertType, priceChangePercent, volumeSpike);
+        setLastAnalysisTime(Date.now());
+      }
+    }, 5000); // Check every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, [chartData, symbol, lastAnalysisTime]);
+  
+  const sendTradingAlert = async (alertType: string, priceChange: number, volumeSpike: boolean) => {
+    let alertMessage = '';
+    
+    switch (alertType) {
+      case 'HIGH_VOLATILITY':
+        alertMessage = `🚨 **High Volatility Alert for ${symbol}**\n\n📊 Price moved ${priceChange.toFixed(2)}% in recent periods!\n⚡ This could be a significant trading opportunity.\n\n🤖 Should I analyze this movement for you?`;
+        break;
+      case 'VOLUME_SPIKE':
+        alertMessage = `📢 **Volume Spike Alert for ${symbol}**\n\n📈 Unusually high trading volume detected!\n💡 This often precedes significant price movements.\n\n🔍 Want me to investigate this pattern?`;
+        break;
+      case 'PRICE_MOVE':
+        alertMessage = `📊 **Price Movement Alert for ${symbol}**\n\n⚡ Notable price change: ${priceChange.toFixed(2)}%\n${volumeSpike ? '📈 Also seeing increased volume!' : ''}\n\n🎯 Shall I provide detailed analysis?`;
+        break;
+    }
+    
+    const alertChatMessage: ChatMessage = {
+      id: `alert-${Date.now()}`,
+      type: 'ai',
+      content: alertMessage,
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, alertChatMessage]);
+    
+    // Show notification if chat is closed
+    if (!isOpen) {
+      setHasNewMessage(true);
+      setTradingOpportunityAlert(alertType);
+    }
+  };
+
+  const performAutoAnalysis = async () => {
+    if (!symbol || isLoading) return;
+    
+    setIsLoading(true);
+    setIsTyping(true);
+    
+    // Add AI thinking message
+    const thinkingMessage: ChatMessage = {
+      id: 'auto-thinking',
+      type: 'ai',
+      content: `🔍 I'm automatically analyzing ${symbol} chart for you...`,
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, thinkingMessage]);
+    
+    // Add typing indicator
+    const typingMessage: ChatMessage = {
+      id: 'auto-typing',
+      type: 'ai',
+      content: '',
+      timestamp: new Date(),
+      isTyping: true,
+    };
+    
+    setMessages(prev => [...prev, typingMessage]);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const response = await fetch(`http://localhost:8000/api/ai/analyze/${symbol}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (response.ok) {
+        const analysis = await response.json();
+        
+        // Remove typing indicator
+        setMessages(prev => prev.filter(msg => msg.id !== 'auto-typing'));
+        
+        const autoAnalysisMessage = `🎆 **Auto Analysis Complete for ${symbol}**
+        
+🎯 **Signal:** ${getSignalEmoji(analysis.signal)} **${analysis.signal}**
+📊 **Confidence:** ${(analysis.confidence * 100).toFixed(1)}%
+
+💡 **Key Market Insights:**
+${analysis.key_insights.map((insight, idx) => `${idx + 1}. ${insight}`).join('\n')}
+
+⚠️ **Risk Assessment:**
+${analysis.risk_assessment}
+
+${analysis.price_target ? `🎯 **Price Target:** $${analysis.price_target.toFixed(2)}` : ''}
+${analysis.stop_loss ? `🛑 **Stop Loss:** $${analysis.stop_loss.toFixed(2)}` : ''}
+
+🚀 Ready to help with any questions about this analysis!`;
+        
+        const aiMessage: ChatMessage = {
+          id: Date.now().toString(),
+          type: 'ai',
+          content: autoAnalysisMessage,
+          timestamp: new Date(),
+          analysis,
+        };
+        
+        setMessages(prev => [...prev, aiMessage]);
+        
+        // Show notification if chat is closed
+        if (!isOpen) {
+          setHasNewMessage(true);
+        }
+        
+      } else {
+        // Remove typing indicator and show error
+        setMessages(prev => prev.filter(msg => msg.id !== 'auto-typing'));
+        
+        const errorMessage: ChatMessage = {
+          id: Date.now().toString(),
+          type: 'ai',
+          content: `❌ Sorry, I couldn't automatically analyze ${symbol} right now. The market data service might be temporarily unavailable. You can try asking me manually!`,
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, errorMessage]);
+      }
+      
+    } catch (error) {
+      // Remove typing indicator and show connection error
+      setMessages(prev => prev.filter(msg => msg.id !== 'auto-typing'));
+      
+      const connectionErrorMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: `🔧 I'm having trouble connecting to the analysis service. Please make sure the backend is running on port 8000, or try asking me manually!`,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, connectionErrorMessage]);
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -246,11 +426,39 @@ Would you like me to explain any part of this analysis?`;
     }
   };
 
+  const analyzeChartPattern = (data: any): string => {
+    if (!chartData || !Array.isArray(chartData) || chartData.length < 5) {
+      return "";
+    }
+    
+    const recentData = chartData.slice(-5);
+    const prices = recentData.map(d => d.close);
+    const volumes = recentData.map(d => d.volume);
+    
+    // Simple pattern recognition
+    const isUptrend = prices.every((price, i) => i === 0 || price >= prices[i-1]);
+    const isDowntrend = prices.every((price, i) => i === 0 || price <= prices[i-1]);
+    const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
+    const currentVolume = volumes[volumes.length - 1];
+    const volumeSpike = currentVolume > avgVolume * 1.5;
+    
+    if (isUptrend && volumeSpike) {
+      return "\n\n📈 **Chart Pattern Alert:** I notice a strong uptrend with volume spike - this could indicate bullish momentum!";
+    } else if (isDowntrend && volumeSpike) {
+      return "\n\n📉 **Chart Pattern Alert:** I see a downtrend with high volume - potential bearish pressure detected!";
+    } else if (volumeSpike) {
+      return "\n\n📊 **Volume Alert:** Significant volume spike detected - market activity is increasing!";
+    }
+    
+    return "";
+  };
+
   const generateContextualResponse = (input: string, currentSymbol?: string): string => {
     const lowerInput = input.toLowerCase();
+    const chartInsight = analyzeChartPattern(chartData);
     
     if (lowerInput.includes('hello') || lowerInput.includes('hi') || lowerInput.includes('halo')) {
-      return `👋 Hello! I'm your AI Trading Assistant. How can I help you with trading analysis today? ${currentSymbol ? `I see you're looking at ${currentSymbol}.` : ''}`;
+      return `👋 Hello! I'm your AI Trading Assistant. How can I help you with trading analysis today? ${currentSymbol ? `I see you're looking at ${currentSymbol}.` : ''}${chartInsight}`;
     }
     
     if (lowerInput.includes('help') || lowerInput.includes('bantuan')) {
@@ -287,16 +495,20 @@ Or use the quick action buttons for instant analysis!`;
         <button
           onClick={() => {
             setIsOpen(!isOpen);
-            if (!isOpen) setHasNewMessage(false);
+            if (!isOpen) {
+              setHasNewMessage(false);
+              setTradingOpportunityAlert(null);
+            }
           }}
           className={`
-            relative w-14 h-14 rounded-full shadow-lg transition-all duration-300 ease-in-out
+            relative w-14 h-14 rounded-full shadow-lg transition-all duration-500 ease-in-out
             ${isOpen 
-              ? 'bg-red-500 hover:bg-red-600 rotate-180' 
-              : 'bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 hover:scale-110'
+              ? 'bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 rotate-180 shadow-red-500/30' 
+              : 'bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 hover:scale-110 shadow-purple-500/30'
             }
             flex items-center justify-center text-white
             ${!isOpen ? 'animate-pulse hover:animate-none' : ''}
+            dark:shadow-lg dark:shadow-purple-500/20
           `}
         >
           {isOpen ? (
@@ -308,8 +520,24 @@ Or use the quick action buttons for instant analysis!`;
                 <div className="absolute -top-2 -right-2 w-4 h-4 bg-green-500 rounded-full animate-ping" />
               )}
               {hasNewMessage && !isTyping && (
-                <div className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center animate-bounce">
-                  <span className="text-xs font-bold text-white">!</span>
+                <div className={`
+                  absolute -top-2 -right-2 w-6 h-6 rounded-full border-2 border-white 
+                  flex items-center justify-center animate-bounce
+                  ${
+                    tradingOpportunityAlert === 'HIGH_VOLATILITY' ? 'bg-orange-500' :
+                    tradingOpportunityAlert === 'VOLUME_SPIKE' ? 'bg-blue-500' :
+                    tradingOpportunityAlert === 'PRICE_MOVE' ? 'bg-green-500' :
+                    'bg-red-500'
+                  }
+                `}>
+                  <span className="text-xs font-bold text-white">
+                    {
+                      tradingOpportunityAlert === 'HIGH_VOLATILITY' ? '⚡' :
+                      tradingOpportunityAlert === 'VOLUME_SPIKE' ? '📊' :
+                      tradingOpportunityAlert === 'PRICE_MOVE' ? '📈' :
+                      '!'
+                    }
+                  </span>
                 </div>
               )}
             </>
@@ -323,11 +551,13 @@ Or use the quick action buttons for instant analysis!`;
           fixed bottom-24 right-6 
           w-96 max-w-[calc(100vw-3rem)] 
           h-[600px] max-h-[calc(100vh-8rem)] 
-          bg-white dark:bg-gray-900 rounded-2xl shadow-2xl 
-          border border-gray-200 dark:border-gray-700 z-40 
+          bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl 
+          border border-gray-200/50 dark:border-gray-700/50 z-40 
           flex flex-col 
-          animate-in slide-in-from-bottom-5 duration-300
+          animate-in slide-in-from-bottom-5 duration-500
           sm:w-96 sm:h-[600px]
+          dark:shadow-2xl dark:shadow-gray-900/50
+          transition-all duration-300 ease-in-out
         ">
           {/* Chat Header */}
           <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-t-2xl">
@@ -347,7 +577,7 @@ Or use the quick action buttons for instant analysis!`;
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-800">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm transition-colors duration-300">
             {messages.map((message) => (
               <div
                 key={message.id}
