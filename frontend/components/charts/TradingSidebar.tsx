@@ -85,18 +85,19 @@ export default function TradingSidebar({
     
     fetchData();
     
-    // Refresh quotes every 30 seconds
+    // Refresh quotes every 15 seconds for better real-time feeling
     const interval = setInterval(async () => {
       if (popularSymbols.length > 0) {
         try {
           const symbolsList = popularSymbols.map(s => s.symbol);
           const quotesData = await tradingApi.getMultipleQuotes(symbolsList);
           setQuotes(quotesData);
+          console.log('📊 Market data refreshed at', new Date().toLocaleTimeString());
         } catch (error) {
           console.error('Error refreshing quotes:', error);
         }
       }
-    }, 30000);
+    }, 15000);
     
     return () => clearInterval(interval);
   }, []);
@@ -138,10 +139,13 @@ export default function TradingSidebar({
   return (
     <div className="space-y-4">
       {/* Timeframe Selector */}
-      <Card className="border shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-            🕰️ Timeframes
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-950/30 dark:to-indigo-950/30 backdrop-blur">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm">
+              🕰️
+            </div>
+            Timeframes
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0 pb-3">
@@ -167,18 +171,41 @@ export default function TradingSidebar({
       </Card>
 
       {/* Market Overview */}
-      <Card className="border shadow-md bg-card">
-        <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/50 dark:to-blue-950/50 rounded-t-lg">
-          <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <ArrowTrendingUpIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
-            📈 Market Overview
-          </CardTitle>
-          <div className="text-xs text-muted-foreground mt-1">Live market prices via Alpha Vantage</div>
+      <Card className="border-0 shadow-lg bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+        <CardHeader className="pb-4 bg-gradient-to-r from-green-50/80 to-blue-50/80 dark:from-green-950/30 dark:to-blue-950/30 rounded-t-xl border-b border-border/50">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-sm">
+                <ArrowTrendingUpIcon className="h-4 w-4" />
+              </div>
+              Market Overview
+            </CardTitle>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-muted-foreground font-medium">Live</span>
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1 font-medium">Real-time market data powered by Alpha Vantage</div>
         </CardHeader>
-        <CardContent className="space-y-2 p-3">
+        <CardContent className="space-y-3 p-4">
           {isLoading ? (
-            <div className="flex items-center justify-center p-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-muted/50 animate-pulse">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-muted rounded-xl" />
+                    <div className="space-y-2">
+                      <div className="w-16 h-3 bg-muted rounded" />
+                      <div className="w-24 h-2 bg-muted rounded" />
+                      <div className="w-12 h-2 bg-muted rounded" />
+                    </div>
+                  </div>
+                  <div className="text-right space-y-2">
+                    <div className="w-16 h-4 bg-muted rounded" />
+                    <div className="w-12 h-3 bg-muted rounded" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             popularSymbols.map((item) => {
@@ -190,53 +217,60 @@ export default function TradingSidebar({
                 <div
                   key={item.symbol}
                   className={cn(
-                    "flex items-center justify-between p-3 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
+                    "group flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.01]",
                     symbol === item.symbol 
-                      ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 shadow-md" 
-                      : "bg-muted/50 border-border hover:bg-muted"
+                      ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-700 shadow-md" 
+                      : "bg-background hover:bg-muted/50 border-border/50 hover:border-border"
                   )}
                   onClick={() => onSymbolChange(item.symbol)}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-background shadow-sm">
-                      <span className="text-sm font-bold text-foreground">
-                        {SYMBOL_ICONS[item.symbol] || '📊'}
+                  {/* Icon */}
+                  <div className="flex-shrink-0 relative">
+                    <div className="w-8 h-8 rounded-lg bg-muted/80 flex items-center justify-center">
+                      <span className="text-sm font-bold">
+                        {SYMBOL_ICONS[item.symbol] || '📈'}
                       </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
-                        <span className="font-bold text-xs text-foreground">{item.symbol}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleWatchlist(item.symbol);
-                          }}
-                          className="h-4 w-4 p-0 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 rounded-full"
-                        >
-                          <BookmarkIcon 
-                            className={cn(
-                              "h-2.5 w-2.5 transition-colors",
-                              watchlist.includes(item.symbol) ? "fill-current text-yellow-500" : "text-muted-foreground hover:text-yellow-500"
-                            )} 
-                          />
-                        </Button>
-                      </div>
-                      <div className="text-xs text-muted-foreground font-medium truncate">{item.name}</div>
-                      <div className="text-xs text-muted-foreground/70">{item.type}</div>
-                    </div>
+                    {watchlist.includes(item.symbol) && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full" />
+                    )}
                   </div>
                   
-                  <div className="text-right">
-                    <div className="font-bold text-xs text-foreground">
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="font-semibold text-sm">{item.symbol}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleWatchlist(item.symbol);
+                        }}
+                        className="h-4 w-4 p-0 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 rounded"
+                      >
+                        <BookmarkIcon 
+                          className={cn(
+                            "h-2.5 w-2.5",
+                            watchlist.includes(item.symbol) ? "fill-current text-yellow-500" : "text-muted-foreground"
+                          )} 
+                        />
+                      </Button>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">{item.name}</div>
+                    <div className="text-xs text-muted-foreground/70">{item.type}</div>
+                  </div>
+                  
+                  {/* Price */}
+                  <div className="text-right flex flex-col gap-1">
+                    <div className="font-semibold text-sm">
                       ${quote ? formatPrice(quote.price) : '--'}
                     </div>
                     <div className={cn(
-                      "text-xs flex items-center gap-1 font-semibold px-1.5 py-0.5 rounded-full",
+                      "text-xs flex items-center gap-1 font-medium px-1.5 py-0.5 rounded",
                       trend === 'up' 
-                        ? "text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/50" 
-                        : "text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/50"
+                        ? "text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30" 
+                        : "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30"
                     )}>
                       {trend === 'up' ? (
                         <ArrowUpIcon className="h-2.5 w-2.5" />
@@ -254,27 +288,29 @@ export default function TradingSidebar({
       </Card>
 
       {/* Technical Analysis */}
-      <Card className="border shadow-md bg-card">
-        <CardHeader className="pb-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/50 dark:to-indigo-950/50 rounded-t-lg">
-          <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <BoltIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-            ⚡ Technical Analysis
+      <Card className="border-0 shadow-lg bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+        <CardHeader className="pb-4 bg-gradient-to-r from-purple-50/80 to-indigo-50/80 dark:from-purple-950/30 dark:to-indigo-950/30 rounded-t-xl border-b border-border/50">
+          <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-sm">
+              <BoltIcon className="h-4 w-4" />
+            </div>
+            Technical Analysis
           </CardTitle>
-          <div className="text-xs text-muted-foreground mt-1">Real-time market signals</div>
+          <div className="text-xs text-muted-foreground mt-1 font-medium">Real-time market signals and indicators</div>
         </CardHeader>
-        <CardContent className="space-y-2 p-3">
+        <CardContent className="space-y-3 p-4">
           {TECHNICAL_INDICATORS.map((indicator, index) => (
-            <div key={index} className="flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-muted/50 to-muted/70 border border-border hover:shadow-sm transition-all">
+            <div key={index} className="group flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-background/80 to-muted/30 border border-border/60 hover:shadow-md hover:scale-[1.01] transition-all duration-200">
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold text-foreground truncate">{indicator.name}</div>
+                <div className="text-sm font-bold text-foreground truncate mb-1">{indicator.name}</div>
                 <Badge 
                   variant={getStatusBadgeVariant(indicator.status)}
-                  className="text-xs mt-0.5 font-semibold px-1.5 py-0.5"
+                  className="text-xs font-semibold px-2 py-0.5 shadow-sm"
                 >
                   {indicator.status}
                 </Badge>
               </div>
-              <div className={cn("font-bold text-xs px-2 py-1 rounded-full bg-background shadow-sm", indicator.color)}>
+              <div className={cn("font-bold text-sm px-3 py-1.5 rounded-xl bg-background/80 shadow-sm ring-1 ring-border/20 group-hover:ring-border/40 transition-all", indicator.color)}>
                 {indicator.value}
               </div>
             </div>

@@ -24,10 +24,10 @@ export default function RootLayout({
       <body className={`${inter.className} antialiased`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="light"
           enableSystem
-          disableTransitionOnChange
-          themes={['light', 'dark', 'terminal']}
+          disableTransitionOnChange={false}
+          themes={['light', 'dark']}
         >
           <DashboardLayout>
             {children}

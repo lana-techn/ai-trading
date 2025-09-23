@@ -82,17 +82,50 @@ export default function ProfessionalTradingChart({
         throw new Error(chartResponse.error || 'Failed to fetch chart data');
       }
       
-      // Convert Alpha Vantage data to chart format
-      const chartData: CandleData[] = chartResponse.data.map((item: CandlestickData) => ({
-        time: item.time,
-        open: item.open,
-        high: item.high,
-        low: item.low,
-        close: item.close,
-        volume: item.volume
-      }));
+      // Convert Alpha Vantage data to chart format with proper time formatting
+      const chartData: CandleData[] = chartResponse.data.map((item: CandlestickData) => {
+        // For daily timeframe, convert date string to proper format
+        let timeValue: string;
+        if (timeframe === 'daily' || timeframe === '1d') {
+          // Ensure date is in YYYY-MM-DD format for daily charts
+          const date = new Date(item.time);
+          if (!isNaN(date.getTime())) {
+            timeValue = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+          } else {
+            timeValue = item.time; // fallback to original
+          }
+        } else {
+          // For intraday, keep timestamp format
+          timeValue = item.time;
+        }
+        
+        return {
+          time: timeValue,
+          open: parseFloat(item.open.toString()),
+          high: parseFloat(item.high.toString()),
+          low: parseFloat(item.low.toString()),
+          close: parseFloat(item.close.toString()),
+          volume: parseInt(item.volume.toString())
+        };
+      });
       
-      setChartData(chartData);
+      // Sort data by time and remove duplicates for proper chart rendering
+      chartData.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+      
+      // Remove duplicate timestamps using Map for better performance
+      const timeMap = new Map<string, CandleData>();
+      chartData.forEach(item => {
+        timeMap.set(item.time, item); // This will automatically overwrite duplicates
+      });
+      
+      // Convert back to array and sort by time
+      const uniqueChartData = Array.from(timeMap.values()).sort((a, b) => 
+        new Date(a.time).getTime() - new Date(b.time).getTime()
+      );
+      
+      console.log('🔄 Processed data: Original', chartData.length, 'Unique:', uniqueChartData.length);
+      
+      setChartData(uniqueChartData);
       
       // Update quote if fetched
       if (quoteResponse && quoteResponse.success) {
@@ -122,7 +155,9 @@ export default function ProfessionalTradingChart({
         symbol,
         timeframe,
         candlesCount: chartData.length,
-        currentPrice: quoteResponse?.data?.price || chartResponse.meta.latest_price
+        currentPrice: quoteResponse?.data?.price || chartResponse.meta.latest_price,
+        firstDataPoint: chartData[0],
+        lastDataPoint: chartData[chartData.length - 1]
       });
       
     } catch (error) {
@@ -135,7 +170,21 @@ export default function ProfessionalTradingChart({
       
       // Fallback to demo data if API fails
       const fallbackData = generateFallbackData(symbol);
+      console.log('🔄 Using fallback data:', fallbackData.length, 'candles');
       setChartData(fallbackData);
+      
+      // Set state from fallback data
+      if (fallbackData.length > 0) {
+        setState(prev => ({
+          ...prev,
+          currentPrice: fallbackData[fallbackData.length - 1].close,
+          priceChange: fallbackData.length > 1 ? 
+            fallbackData[fallbackData.length - 1].close - fallbackData[fallbackData.length - 2].close : 0,
+          priceChangePercent: fallbackData.length > 1 ? 
+            ((fallbackData[fallbackData.length - 1].close - fallbackData[fallbackData.length - 2].close) / fallbackData[fallbackData.length - 2].close * 100) : 0,
+          lastUpdated: new Date()
+        }));
+      }
     }
   };
   
@@ -241,54 +290,36 @@ export default function ProfessionalTradingChart({
 
     console.log('🚀 Using EXACT same config as BackupWorkingChart for:', symbol);
     
-    // Professional trading chart configuration
+    console.log('🚀 Creating chart with container width:', chartContainerRef.current.clientWidth);
+    
+    // Simple, reliable chart configuration
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth || 800,
       height: height,
       layout: {
-        backgroundColor: '#FAFAFA',    // Slightly off-white background
-        textColor: '#2E2E2E',         // Dark gray text
+        backgroundColor: '#ffffff',
+        textColor: '#333333',
         fontSize: 12,
-        fontFamily: 'system-ui, -apple-system, sans-serif',
       },
       grid: {
-        vertLines: { 
-          color: '#E8E8E8',           // Light grid lines
-          style: 0,                   // Solid lines
-        },
-        horzLines: { 
-          color: '#E8E8E8',           // Light grid lines
-          style: 0,                   // Solid lines
-        },
+        vertLines: { color: '#f0f0f0' },
+        horzLines: { color: '#f0f0f0' },
       },
       crosshair: {
-        mode: 1,                      // Normal crosshair
-        vertLine: {
-          color: '#4A90E2',           // Blue crosshair
-          width: 1,
-          style: 2,                   // Dashed line
-        },
-        horzLine: {
-          color: '#4A90E2',           // Blue crosshair
-          width: 1,
-          style: 2,                   // Dashed line
-        },
+        mode: 1,
       },
       rightPriceScale: {
-        borderColor: '#D0D0D0',
-        scaleMargins: { top: 0.1, bottom: 0.1 },
+        borderColor: '#cccccc',
       },
       timeScale: {
-        borderColor: '#D0D0D0',
+        borderColor: '#cccccc',
         timeVisible: true,
-        secondsVisible: false,
       },
       handleScroll: {
         mouseWheel: true,
         pressedMouseMove: true,
       },
       handleScale: {
-        axisPressedMouseMove: true,
         mouseWheel: true,
         pinch: true,
       },
@@ -343,19 +374,57 @@ export default function ProfessionalTradingChart({
     }
 
     console.log('📈 Updating Professional chart with', chartData.length, 'candles');
-    console.log('📈 Sample data being set:', chartData.slice(0, 2));
+    console.log('📈 First 3 data points:', chartData.slice(0, 3));
+    console.log('📈 Data format check - time type:', typeof chartData[0]?.time, 'sample:', chartData[0]?.time);
     
     try {
-      // EXACT same approach as BackupWorkingChart
-      console.log('🔄 Setting data EXACTLY like BackupWorkingChart:', chartData.slice(0, 2));
+      // Enhanced validation for chart data
+      const validData = chartData.filter((item, index) => {
+        const hasValidTime = item.time && typeof item.time === 'string';
+        const hasValidPrices = !isNaN(item.open) && 
+                              !isNaN(item.high) && 
+                              !isNaN(item.low) && 
+                              !isNaN(item.close) &&
+                              item.open > 0 && 
+                              item.high > 0 && 
+                              item.low > 0 && 
+                              item.close > 0;
+        const hasValidVolume = !isNaN(item.volume) && item.volume >= 0;
+        
+        const isValid = hasValidTime && hasValidPrices && hasValidVolume;
+        
+        if (!isValid) {
+          console.warn('⚠️ Invalid data point at index', index, ':', item);
+        }
+        
+        return isValid;
+      });
       
-      seriesRef.current.setData(chartData);
-      chartRef.current.timeScale().fitContent();
+      // Final sort by timestamp to ensure ascending order
+      validData.sort((a, b) => {
+        const timeA = new Date(a.time).getTime();
+        const timeB = new Date(b.time).getTime();
+        return timeA - timeB;
+      });
       
-    console.log('✅ Data set and chart updated');
+      console.log('🔄 Final validation: Setting', validData.length, 'valid data points to chart');
+      console.log('🔄 Time range:', validData[0]?.time, 'to', validData[validData.length - 1]?.time);
+      
+      if (validData.length > 0) {
+        seriesRef.current.setData(validData);
+        chartRef.current?.timeScale().fitContent();
+        console.log('✅ Chart data updated successfully');
+      } else {
+        console.error('❌ No valid data points to display');
+      }
       
     } catch (error) {
       console.error('❌ Error updating chart:', error);
+      console.error('❌ Error details:', {
+        chartDataLength: chartData.length,
+        sampleData: chartData.slice(0, 2),
+        error: error
+      });
     }
   }, [chartData, showVolume]);
 
@@ -392,17 +461,28 @@ export default function ProfessionalTradingChart({
 
   if (state.isLoading && chartData.length === 0) {
     return (
-      <Card className={cn('w-full', className)}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ChartBarIcon className="h-5 w-5" />
+      <Card className={cn(
+        'w-full border-0 shadow-xl bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60', 
+        className
+      )}>
+        <CardHeader className="pb-4 bg-gradient-to-r from-background/50 to-muted/30 rounded-t-xl border-b border-border/50">
+          <CardTitle className="flex items-center gap-3 text-xl font-bold">
+            <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md animate-pulse">
+              <ChartBarIcon className="h-5 w-5" />
+            </div>
             Loading {symbol}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center" style={{ height: `${height}px` }}>
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading market data...</p>
+          <div className="text-center space-y-4">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-muted border-t-primary mx-auto" />
+              <div className="absolute inset-0 rounded-full h-16 w-16 border-4 border-transparent border-t-secondary animate-spin" style={{animationDirection: 'reverse', animationDuration: '2s'}} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-foreground font-semibold">Loading market data...</p>
+              <p className="text-muted-foreground text-sm">Fetching real-time {symbol} data</p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -410,16 +490,25 @@ export default function ProfessionalTradingChart({
   }
 
   return (
-    <Card className={cn('w-full transition-all duration-300', className, isFullscreen && 'fixed inset-4 z-50')}>
-      <CardHeader className="pb-2">
+    <Card className={cn(
+      'w-full border-0 shadow-xl bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 transition-all duration-300', 
+      className, 
+      isFullscreen && 'fixed inset-4 z-50'
+    )}>
+      <CardHeader className="pb-4 bg-gradient-to-r from-background/50 to-muted/30 rounded-t-xl border-b border-border/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                {symbol}
+              <CardTitle className="flex items-center gap-3 text-xl font-bold">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md">
+                    <ChartBarIcon className="h-5 w-5" />
+                  </div>
+                  {symbol}
+                </div>
                 {autoRefresh && (
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1" />
+                  <Badge variant="outline" className="bg-green-50/80 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-700 shadow-sm">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1.5" />
                     Live
                   </Badge>
                 )}
@@ -494,8 +583,8 @@ export default function ProfessionalTradingChart({
       </CardHeader>
       
       <CardContent className="p-0">
-        <div className="px-6 py-3 border-b bg-muted/20">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+        <div className="px-6 py-4 border-b bg-gradient-to-r from-muted/10 to-muted/20 backdrop-blur">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
             <div>
               <div className="text-muted-foreground mb-1">24h High</div>
               <div className="font-semibold text-green-600">
@@ -523,11 +612,11 @@ export default function ProfessionalTradingChart({
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 bg-gradient-to-b from-background/50 to-background">
           <div 
             ref={chartContainerRef}
             style={{ height: `${height}px` }}
-            className="w-full"
+            className="w-full rounded-lg overflow-hidden shadow-inner ring-1 ring-border/20"
           />
         </div>
       </CardContent>

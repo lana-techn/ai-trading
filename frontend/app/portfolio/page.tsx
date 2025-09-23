@@ -1,184 +1,129 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, Button, Badge } from '@/components/ui';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { useTheme } from 'next-themes';
 import {
+  ChartBarIcon,
+  BanknotesIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
-  WalletIcon,
-  ChartPieIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ArrowPathIcon,
-  ArrowDownTrayIcon,
   EyeIcon,
   EyeSlashIcon,
+  Cog6ToothIcon,
+  PlusIcon,
+  ArrowPathIcon,
+  ClockIcon,
+  GlobeAltIcon,
+  ScaleIcon,
+  ShieldCheckIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
+import PortfolioDashboard from '@/components/portfolio/PortfolioDashboard';
+import PortfolioHoldings from '@/components/portfolio/PortfolioHoldings';
+import PortfolioPerformance from '@/components/portfolio/PortfolioPerformance';
+import TransactionHistory from '@/components/portfolio/TransactionHistory';
+import PortfolioAnalytics from '@/components/portfolio/PortfolioAnalytics';
 
-interface Holding {
-  id: string;
-  symbol: string;
-  name: string;
-  amount: number;
-  avgPrice: number;
-  currentPrice: number;
-  value: number;
-  pnl: number;
-  pnlPercent: number;
-  allocation: number;
-}
-
-interface Transaction {
-  id: string;
-  timestamp: number;
-  symbol: string;
-  type: 'buy' | 'sell';
-  amount: number;
-  price: number;
-  total: number;
-  fees: number;
-}
-
-interface PortfolioMetrics {
+interface PortfolioData {
   totalValue: number;
-  totalPnl: number;
-  totalPnlPercent: number;
+  totalGainLoss: number;
+  totalGainLossPercent: number;
   dayChange: number;
   dayChangePercent: number;
-  weekChange: number;
-  monthChange: number;
-  yearChange: number;
-  cashBalance: number;
+  holdings: any[];
+  transactions: any[];
 }
 
-const PortfolioPage = () => {
-  const [holdings, setHoldings] = useState<Holding[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [metrics, setMetrics] = useState<PortfolioMetrics>({
-    totalValue: 0,
-    totalPnl: 0,
-    totalPnlPercent: 0,
-    dayChange: 0,
-    dayChangePercent: 0,
-    weekChange: 0,
-    monthChange: 0,
-    yearChange: 0,
-    cashBalance: 10000,
-  });
-  const [showBalances, setShowBalances] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
+export default function PortfolioPage() {
+  const [activeTab, setActiveTab] = useState('overview');
+  const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showBalance, setShowBalance] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Mock data generation
+  // Theme management with mounted state
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const isDarkMode = mounted ? resolvedTheme === 'dark' : false;
+
   useEffect(() => {
-    const generateMockData = () => {
-      const symbols = ['BTC', 'ETH', 'ADA', 'DOT', 'LINK', 'MATIC', 'AVAX'];
-      const mockHoldings: Holding[] = [];
-      let totalValue = 0;
-
-      symbols.forEach((symbol, index) => {
-        if (Math.random() > 0.3) { // 70% chance of holding
-          const amount = Math.random() * 10 + 0.1;
-          const avgPrice = Math.random() * 50000 + 1000;
-          const currentPrice = avgPrice * (0.8 + Math.random() * 0.4); // ±20% variation
-          const value = amount * currentPrice;
-          const pnl = (currentPrice - avgPrice) * amount;
-          const pnlPercent = (pnl / (avgPrice * amount)) * 100;
-
-          totalValue += value;
-
-          mockHoldings.push({
-            id: `holding-${index}`,
-            symbol,
-            name: `${symbol} Token`,
-            amount,
-            avgPrice,
-            currentPrice,
-            value,
-            pnl,
-            pnlPercent,
-            allocation: 0, // Will be calculated below
-          });
-        }
-      });
-
-      // Calculate allocations
-      mockHoldings.forEach(holding => {
-        holding.allocation = (holding.value / totalValue) * 100;
-      });
-
-      const totalPnl = mockHoldings.reduce((sum, h) => sum + h.pnl, 0);
-      const totalInvested = mockHoldings.reduce((sum, h) => sum + (h.avgPrice * h.amount), 0);
-
-      setHoldings(mockHoldings);
-      setMetrics(prev => ({
-        ...prev,
-        totalValue: totalValue + prev.cashBalance,
-        totalPnl,
-        totalPnlPercent: totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0,
-        dayChange: totalValue * (Math.random() * 0.1 - 0.05),
-        dayChangePercent: Math.random() * 10 - 5,
-        weekChange: totalValue * (Math.random() * 0.2 - 0.1),
-        monthChange: totalValue * (Math.random() * 0.3 - 0.15),
-        yearChange: totalValue * (Math.random() * 2 - 1),
-      }));
-
-      // Generate mock transactions
-      const mockTransactions: Transaction[] = [];
-      for (let i = 0; i < 20; i++) {
-        const symbol = symbols[Math.floor(Math.random() * symbols.length)];
-        const type = Math.random() > 0.5 ? 'buy' : 'sell';
-        const amount = Math.random() * 5 + 0.1;
-        const price = Math.random() * 50000 + 1000;
-        const total = amount * price;
-        
-        mockTransactions.push({
-          id: `tx-${i}`,
-          timestamp: Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000, // Last 30 days
-          symbol,
-          type,
-          amount,
-          price,
-          total,
-          fees: total * 0.001, // 0.1% fee
-        });
-      }
-
-      mockTransactions.sort((a, b) => b.timestamp - a.timestamp);
-      setTransactions(mockTransactions);
-      setIsLoading(false);
-    };
-
-    generateMockData();
+    setMounted(true);
   }, []);
 
-  const formatCurrency = (value: number, hideBalance = false) => {
-    if (hideBalance && !showBalances) return '****';
+  // Mock portfolio data - replace with real API calls
+  useEffect(() => {
+    const fetchPortfolioData = async () => {
+      setLoading(true);
+      try {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const mockData: PortfolioData = {
+          totalValue: 127549.83,
+          totalGainLoss: 23847.92,
+          totalGainLossPercent: 23.01,
+          dayChange: 1547.21,
+          dayChangePercent: 1.23,
+          holdings: [
+            { symbol: 'AAPL', name: 'Apple Inc.', quantity: 150, avgPrice: 145.32, currentPrice: 182.41, value: 27361.50, gainLoss: 5563.50, gainLossPercent: 25.55 },
+            { symbol: 'GOOGL', name: 'Alphabet Inc.', quantity: 75, avgPrice: 2234.50, currentPrice: 2591.25, value: 19434.38, gainLoss: 2676.25, gainLossPercent: 15.97 },
+            { symbol: 'MSFT', name: 'Microsoft Corp.', quantity: 100, avgPrice: 285.75, currentPrice: 334.89, value: 33489.00, gainLoss: 4914.00, gainLossPercent: 17.19 },
+            { symbol: 'TSLA', name: 'Tesla Inc.', quantity: 50, avgPrice: 198.45, currentPrice: 235.87, value: 11793.50, gainLoss: 1871.00, gainLossPercent: 18.86 },
+            { symbol: 'BTC-USD', name: 'Bitcoin', quantity: 2.5, avgPrice: 24500.00, currentPrice: 43250.00, value: 108125.00, gainLoss: 46875.00, gainLossPercent: 76.53 },
+            { symbol: 'ETH-USD', name: 'Ethereum', quantity: 15, avgPrice: 1650.00, currentPrice: 2340.00, value: 35100.00, gainLoss: 10350.00, gainLossPercent: 41.82 }
+          ],
+          transactions: [
+            { id: 1, type: 'buy', symbol: 'AAPL', quantity: 50, price: 182.41, value: 9120.50, date: '2024-01-15', fees: 1.99 },
+            { id: 2, type: 'sell', symbol: 'GOOGL', quantity: 25, price: 2591.25, value: 64781.25, date: '2024-01-14', fees: 4.99 },
+            { id: 3, type: 'buy', symbol: 'BTC-USD', quantity: 0.5, price: 43250.00, value: 21625.00, date: '2024-01-13', fees: 12.50 }
+          ]
+        };
+        
+        setPortfolioData(mockData);
+        setLastUpdated(new Date());
+      } catch (error) {
+        console.error('Failed to fetch portfolio data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPortfolioData();
+  }, []);
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: ChartBarIcon },
+    { id: 'holdings', label: 'Holdings', icon: BanknotesIcon },
+    { id: 'performance', label: 'Performance', icon: ArrowTrendingUpIcon },
+    { id: 'transactions', label: 'Transactions', icon: ClockIcon },
+    { id: 'analytics', label: 'Analytics', icon: ScaleIcon }
+  ];
+
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
+      minimumFractionDigits: 2
+    }).format(amount);
   };
 
-  const formatPercentage = (value: number) => {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${value.toFixed(2)}%`;
+  const formatPercentage = (percent: number) => {
+    return `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`;
   };
 
-  if (isLoading) {
+  if (!mounted) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-muted rounded w-48"></div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-32 bg-muted rounded-lg"></div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background-secondary to-background-tertiary">
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="animate-pulse">
+            <div className="h-8 bg-card rounded w-64 mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-32 bg-card rounded-xl"></div>
               ))}
             </div>
-            <div className="h-96 bg-muted rounded-lg"></div>
           </div>
         </div>
       </div>
@@ -186,275 +131,242 @@ const PortfolioPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-background via-background-secondary to-background-tertiary transition-colors duration-300">
+      <div className="max-w-7xl mx-auto space-y-8 p-6">
+        {/* Modern Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Portfolio</h1>
-            <p className="text-muted-foreground mt-1">Track your crypto investments and performance</p>
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-xl">
+              <BanknotesIcon className="h-8 w-8" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-foreground mb-1">
+                My Portfolio
+              </h1>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span>Real-time portfolio tracking & analytics</span>
+                {lastUpdated && (
+                  <div className="flex items-center gap-1">
+                    <ClockIcon className="h-4 w-4" />
+                    <span>Updated {lastUpdated.toLocaleTimeString()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
+          
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowBalances(!showBalances)}
-              className="flex items-center gap-2"
+              onClick={() => setShowBalance(!showBalance)}
+              className="hover:bg-secondary hover:text-secondary-foreground transition-all duration-200"
             >
-              {showBalances ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-              {showBalances ? 'Hide' : 'Show'} Balances
+              {showBalance ? <EyeSlashIcon className="h-4 w-4 mr-2" /> : <EyeIcon className="h-4 w-4 mr-2" />}
+              {showBalance ? 'Hide' : 'Show'} Balance
             </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <ArrowPathIcon className="h-4 w-4" />
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="hover:bg-secondary hover:text-secondary-foreground transition-all duration-200"
+            >
+              <ArrowPathIcon className="h-4 w-4 mr-2" />
               Refresh
             </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <ArrowDownTrayIcon className="h-4 w-4" />
-              Export
+            
+            <Button
+              size="sm"
+              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg transition-all duration-200"
+            >
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Add Position
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="hover:bg-secondary hover:text-secondary-foreground transition-all duration-200"
+            >
+              <Cog6ToothIcon className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        {/* Portfolio Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-blue-200 dark:border-blue-800">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Portfolio Value</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {formatCurrency(metrics.totalValue, true)}
-                  </p>
+        {/* Portfolio Summary Cards */}
+        {portfolioData && !loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Total Portfolio Value */}
+            <Card className="bg-gradient-to-br from-card to-card/80 border-border/60 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 rounded-lg bg-blue-600/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400">
+                    <BanknotesIcon className="h-5 w-5" />
+                  </div>
+                  <div className="text-xs text-muted-foreground">Total Value</div>
                 </div>
-                <WalletIcon className="h-8 w-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold text-foreground">
+                    {showBalance ? formatCurrency(portfolioData.totalValue) : '••••••'}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Portfolio Balance</div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className={cn(
-            "border-2 transition-colors",
-            metrics.totalPnl >= 0 
-              ? "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50 border-green-200 dark:border-green-800"
-              : "bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/50 dark:to-rose-950/50 border-red-200 dark:border-red-800"
-          )}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total P&L</p>
-                  <p className={cn("text-2xl font-bold",
-                    metrics.totalPnl >= 0 ? "text-trading-bullish" : "text-trading-bearish"
+            {/* Total Gain/Loss */}
+            <Card className="bg-gradient-to-br from-card to-card/80 border-border/60 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className={cn(
+                    "p-2 rounded-lg",
+                    portfolioData.totalGainLoss >= 0 
+                      ? "bg-green-600/10 text-green-600 dark:bg-green-400/10 dark:text-green-400"
+                      : "bg-red-600/10 text-red-600 dark:bg-red-400/10 dark:text-red-400"
                   )}>
-                    {formatCurrency(metrics.totalPnl, true)}
-                  </p>
-                  <p className={cn("text-sm",
-                    metrics.totalPnl >= 0 ? "text-trading-bullish" : "text-trading-bearish"
-                  )}>
-                    {formatPercentage(metrics.totalPnlPercent)}
-                  </p>
+                    {portfolioData.totalGainLoss >= 0 ? <ArrowTrendingUpIcon className="h-5 w-5" /> : <ArrowTrendingDownIcon className="h-5 w-5" />}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Total P&L</div>
                 </div>
-                {metrics.totalPnl >= 0 ? (
-                  <ArrowTrendingUpIcon className="h-8 w-8 text-trading-bullish" />
-                ) : (
-                  <ArrowTrendingDownIcon className="h-8 w-8 text-trading-bearish" />
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                <div className="space-y-1">
+                  <div className={cn(
+                    "text-2xl font-bold",
+                    portfolioData.totalGainLoss >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                  )}>
+                    {showBalance ? formatCurrency(portfolioData.totalGainLoss) : '••••••'}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatPercentage(portfolioData.totalGainLossPercent)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className={cn(
-            "transition-colors",
-            metrics.dayChange >= 0 
-              ? "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50 border-green-200 dark:border-green-800"
-              : "bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/50 dark:to-rose-950/50 border-red-200 dark:border-red-800"
-          )}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">24h Change</p>
-                  <p className={cn("text-2xl font-bold",
-                    metrics.dayChange >= 0 ? "text-trading-bullish" : "text-trading-bearish"
+            {/* Day Change */}
+            <Card className="bg-gradient-to-br from-card to-card/80 border-border/60 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className={cn(
+                    "p-2 rounded-lg",
+                    portfolioData.dayChange >= 0 
+                      ? "bg-green-600/10 text-green-600 dark:bg-green-400/10 dark:text-green-400"
+                      : "bg-red-600/10 text-red-600 dark:bg-red-400/10 dark:text-red-400"
                   )}>
-                    {formatCurrency(metrics.dayChange, true)}
-                  </p>
-                  <p className={cn("text-sm",
-                    metrics.dayChange >= 0 ? "text-trading-bullish" : "text-trading-bearish"
-                  )}>
-                    {formatPercentage(metrics.dayChangePercent)}
-                  </p>
+                    {portfolioData.dayChange >= 0 ? <ArrowTrendingUpIcon className="h-5 w-5" /> : <ArrowTrendingDownIcon className="h-5 w-5" />}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Today</div>
                 </div>
-                {metrics.dayChange >= 0 ? (
-                  <ArrowUpIcon className="h-8 w-8 text-trading-bullish" />
-                ) : (
-                  <ArrowDownIcon className="h-8 w-8 text-trading-bearish" />
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                <div className="space-y-1">
+                  <div className={cn(
+                    "text-2xl font-bold",
+                    portfolioData.dayChange >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                  )}>
+                    {showBalance ? formatCurrency(portfolioData.dayChange) : '••••••'}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatPercentage(portfolioData.dayChangePercent)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/50 dark:to-violet-950/50 border-purple-200 dark:border-purple-800">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Cash Balance</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {formatCurrency(metrics.cashBalance, true)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Available</p>
+            {/* Holdings Count */}
+            <Card className="bg-gradient-to-br from-card to-card/80 border-border/60 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 rounded-lg bg-purple-600/10 text-purple-600 dark:bg-purple-400/10 dark:text-purple-400">
+                    <GlobeAltIcon className="h-5 w-5" />
+                  </div>
+                  <div className="text-xs text-muted-foreground">Positions</div>
                 </div>
-                <ChartPieIcon className="h-8 w-8 text-purple-600" />
-              </div>
-            </CardContent>
-          </Card>
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold text-foreground">
+                    {portfolioData.holdings.length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Active Holdings</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Navigation Tabs */}
+        <div className="flex items-center justify-center">
+          <div className="bg-card/80 backdrop-blur-sm border border-border rounded-xl p-2 shadow-lg">
+            <div className="flex items-center gap-2">
+              {tabs.map((tab) => {
+                const IconComponent = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300",
+                      activeTab === tab.id
+                        ? "bg-primary text-primary-foreground shadow-lg"
+                        : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
+                    )}
+                  >
+                    <IconComponent className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        {/* Holdings Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ChartPieIcon className="h-5 w-5" />
-              Holdings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {holdings.length === 0 ? (
-              <div className="text-center py-12">
-                <ChartPieIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-lg font-medium text-muted-foreground">No Holdings Yet</p>
-                <p className="text-muted-foreground">Start trading to build your portfolio</p>
+        {/* Main Content */}
+        <div className="min-h-[600px]">
+          {loading ? (
+            <div className="flex items-center justify-center h-96">
+              <div className="text-center space-y-4">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-slate-200 border-t-blue-600 mx-auto" />
+                  <div className="absolute inset-0 rounded-full h-16 w-16 border-4 border-transparent border-t-purple-500 animate-spin" style={{animationDirection: 'reverse', animationDuration: '1.5s'}} />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold text-foreground">Loading Portfolio Data</p>
+                  <p className="text-sm text-muted-foreground">Fetching your latest portfolio information</p>
+                </div>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 text-sm font-medium text-muted-foreground">Asset</th>
-                      <th className="text-right py-3 text-sm font-medium text-muted-foreground">Holdings</th>
-                      <th className="text-right py-3 text-sm font-medium text-muted-foreground">Avg Price</th>
-                      <th className="text-right py-3 text-sm font-medium text-muted-foreground">Current Price</th>
-                      <th className="text-right py-3 text-sm font-medium text-muted-foreground">Value</th>
-                      <th className="text-right py-3 text-sm font-medium text-muted-foreground">P&L</th>
-                      <th className="text-right py-3 text-sm font-medium text-muted-foreground">Allocation</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {holdings.map((holding) => (
-                      <tr key={holding.id} className="border-b border-border/50 hover:bg-accent/30 transition-colors">
-                        <td className="py-4">
-                          <div>
-                            <p className="font-medium text-card-foreground">{holding.symbol}</p>
-                            <p className="text-sm text-muted-foreground">{holding.name}</p>
-                          </div>
-                        </td>
-                        <td className="text-right py-4 text-card-foreground">
-                          {holding.amount.toFixed(4)}
-                        </td>
-                        <td className="text-right py-4 text-card-foreground">
-                          {formatCurrency(holding.avgPrice)}
-                        </td>
-                        <td className="text-right py-4 text-card-foreground">
-                          {formatCurrency(holding.currentPrice)}
-                        </td>
-                        <td className="text-right py-4 font-medium text-card-foreground">
-                          {formatCurrency(holding.value, true)}
-                        </td>
-                        <td className="text-right py-4">
-                          <div className={cn("font-medium",
-                            holding.pnl >= 0 ? "text-trading-bullish" : "text-trading-bearish"
-                          )}>
-                            {formatCurrency(holding.pnl, true)}
-                          </div>
-                          <div className={cn("text-sm",
-                            holding.pnl >= 0 ? "text-trading-bullish" : "text-trading-bearish"
-                          )}>
-                            {formatPercentage(holding.pnlPercent)}
-                          </div>
-                        </td>
-                        <td className="text-right py-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <span className="text-sm text-card-foreground">
-                              {holding.allocation.toFixed(1)}%
-                            </span>
-                            <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all"
-                                style={{ width: `${Math.min(holding.allocation, 100)}%` }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent Transactions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Recent Transactions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {transactions.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No transactions yet</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 text-sm font-medium text-muted-foreground">Date</th>
-                      <th className="text-left py-3 text-sm font-medium text-muted-foreground">Asset</th>
-                      <th className="text-left py-3 text-sm font-medium text-muted-foreground">Type</th>
-                      <th className="text-right py-3 text-sm font-medium text-muted-foreground">Amount</th>
-                      <th className="text-right py-3 text-sm font-medium text-muted-foreground">Price</th>
-                      <th className="text-right py-3 text-sm font-medium text-muted-foreground">Total</th>
-                      <th className="text-right py-3 text-sm font-medium text-muted-foreground">Fees</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.slice(0, 15).map((tx) => (
-                      <tr key={tx.id} className="border-b border-border/50 hover:bg-accent/30 transition-colors">
-                        <td className="py-4 text-sm text-muted-foreground">
-                          {new Date(tx.timestamp).toLocaleDateString()}
-                        </td>
-                        <td className="py-4 font-medium text-card-foreground">{tx.symbol}</td>
-                        <td className="py-4">
-                          <Badge 
-                            variant={tx.type === 'buy' ? 'trading-bullish' : 'trading-bearish'}
-                            size="sm"
-                          >
-                            {tx.type.toUpperCase()}
-                          </Badge>
-                        </td>
-                        <td className="text-right py-4 text-card-foreground">
-                          {tx.amount.toFixed(4)}
-                        </td>
-                        <td className="text-right py-4 text-card-foreground">
-                          {formatCurrency(tx.price)}
-                        </td>
-                        <td className="text-right py-4 text-card-foreground font-medium">
-                          {formatCurrency(tx.total, true)}
-                        </td>
-                        <td className="text-right py-4 text-muted-foreground">
-                          {formatCurrency(tx.fees)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          ) : (
+            portfolioData && (
+              <>
+                {activeTab === 'overview' && (
+                  <PortfolioDashboard 
+                    portfolioData={portfolioData}
+                    showBalance={showBalance}
+                  />
+                )}
+                {activeTab === 'holdings' && (
+                  <PortfolioHoldings 
+                    holdings={portfolioData.holdings}
+                    showBalance={showBalance}
+                  />
+                )}
+                {activeTab === 'performance' && (
+                  <PortfolioPerformance 
+                    portfolioData={portfolioData}
+                  />
+                )}
+                {activeTab === 'transactions' && (
+                  <TransactionHistory 
+                    transactions={portfolioData.transactions}
+                    showBalance={showBalance}
+                  />
+                )}
+                {activeTab === 'analytics' && (
+                  <PortfolioAnalytics 
+                    portfolioData={portfolioData}
+                  />
+                )}
+              </>
+            )
+          )}
+        </div>
       </div>
     </div>
   );
-};
-
-export default PortfolioPage;
+}
