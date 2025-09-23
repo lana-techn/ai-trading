@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createChart, IChartApi, ISeriesApi } from 'lightweight-charts';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { tradingApi, ChartData, CandlestickData, Quote } from '@/lib/api';
 import {
   PlayIcon,
   PauseIcon,
@@ -31,6 +32,15 @@ interface CandleData {
   volume: number;
 }
 
+interface ChartState {
+  isLoading: boolean;
+  error: string | null;
+  lastUpdated: Date | null;
+  currentPrice: number;
+  priceChange: number;
+  priceChangePercent: number;
+}
+
 export default function ProfessionalTradingChart({
   symbol,
   timeframe = '1d',
@@ -43,92 +53,182 @@ export default function ProfessionalTradingChart({
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   
   const [chartData, setChartData] = useState<CandleData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [state, setState] = useState<ChartState>({
+    isLoading: false,
+    error: null,
+    lastUpdated: null,
+    currentPrice: 0,
+    priceChange: 0,
+    priceChangePercent: 0,
+  });
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [showVolume, setShowVolume] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [currentPrice, setCurrentPrice] = useState<number>(0);
-  const [priceChange, setPriceChange] = useState<number>(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const dataStreamRef = useRef<(() => void) | null>(null);
 
-  // Generate data using EXACT same format as BackupWorkingChart
-  const generateCryptoData = (symbol: string): CandleData[] => {
-    console.log('🔄 Generating data EXACTLY like BackupWorkingChart for:', symbol);
-    
-    const basePrices: Record<string, number> = {
-      'BTC/USD': 43500,
-      'ETH/USD': 2650,
-      'SOL/USD': 98,
-      'ADA/USD': 0.52,
-      'DOT/USD': 7.8,
-      'AVAX/USD': 36,
-      'MATIC/USD': 0.89,
-      'LINK/USD': 15.2,
-      'BNB/USD': 315,
-      'XRP/USD': 0.62,
-    };
-
-    const basePrice = basePrices[symbol] || 100;
-    const data: CandleData[] = [];
-    let price = basePrice;
-
-    // Use IDENTICAL data as BackupWorkingChart (that works!)
-    const identicalData = [
-      { time: '2024-01-01', open: 43500, high: 44200, low: 43200, close: 43800, volume: 500000 },
-      { time: '2024-01-02', open: 43800, high: 44500, low: 43600, close: 44100, volume: 600000 },
-      { time: '2024-01-03', open: 44100, high: 44800, low: 43900, close: 44400, volume: 700000 },
-      { time: '2024-01-04', open: 44400, high: 45100, low: 44200, close: 44700, volume: 800000 },
-      { time: '2024-01-05', open: 44700, high: 45400, low: 44500, close: 45000, volume: 900000 },
-      { time: '2024-01-06', open: 45000, high: 45700, low: 44800, close: 45300, volume: 600000 },
-      { time: '2024-01-07', open: 45300, high: 46000, low: 45100, close: 45600, volume: 700000 },
-      { time: '2024-01-08', open: 45600, high: 46300, low: 45400, close: 45900, volume: 800000 },
-      { time: '2024-01-09', open: 45900, high: 46600, low: 45700, close: 46200, volume: 900000 },
-      { time: '2024-01-10', open: 46200, high: 46900, low: 46000, close: 46500, volume: 1000000 },
-    ];
-    
-    // Return IDENTICAL data
-    return identicalData;
-    
-    console.log('✅ Generated IDENTICAL data as BackupWorkingChart:', identicalData.length, 'candles');
-    console.log('📊 First candle:', identicalData[0]);
-    
-    return identicalData;
-  };
-
-  // Load data
-  const loadData = async () => {
-    setIsLoading(true);
-    console.log('📈 Loading data for:', symbol);
+  // Fetch real-time data from Alpha Vantage
+  const fetchRealTimeData = async (refreshQuote: boolean = true) => {
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API call
+      // Fetch chart data and quote in parallel
+      const [chartResponse, quoteResponse] = await Promise.all([
+        tradingApi.getChartData(symbol, timeframe),
+        refreshQuote ? tradingApi.getQuote(symbol) : Promise.resolve(null)
+      ]);
       
-      const newData = generateCryptoData(symbol);
-      console.log('📈 Generated data length:', newData.length);
-      console.log('📈 First 3 candles:', newData.slice(0, 3));
-      
-      setChartData(newData);
-      
-      if (newData.length > 0) {
-        const latest = newData[newData.length - 1];
-        const previous = newData[newData.length - 2];
-        
-        setCurrentPrice(latest.close);
-        console.log('📈 Current price set to:', latest.close);
-        
-        if (previous) {
-          const change = latest.close - previous.close;
-          setPriceChange(change);
-          console.log('📈 Price change:', change);
-        }
+      if (!chartResponse.success) {
+        throw new Error(chartResponse.error || 'Failed to fetch chart data');
       }
       
-      setLastUpdated(new Date());
-      console.log('✅ Data loaded successfully');
+      // Convert Alpha Vantage data to chart format
+      const chartData: CandleData[] = chartResponse.data.map((item: CandlestickData) => ({
+        time: item.time,
+        open: item.open,
+        high: item.high,
+        low: item.low,
+        close: item.close,
+        volume: item.volume
+      }));
+      
+      setChartData(chartData);
+      
+      // Update quote if fetched
+      if (quoteResponse && quoteResponse.success) {
+        setQuote(quoteResponse.data);
+        
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          currentPrice: quoteResponse.data.price,
+          priceChange: quoteResponse.data.change,
+          priceChangePercent: parseFloat(quoteResponse.data.change_percent),
+          lastUpdated: new Date(),
+        }));
+      } else {
+        // Update from chart meta if no quote
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          currentPrice: chartResponse.meta.latest_price,
+          priceChange: chartResponse.meta.price_change,
+          priceChangePercent: chartResponse.meta.price_change_percent,
+          lastUpdated: new Date(),
+        }));
+      }
+      
+      console.log('✅ Real-time data loaded:', {
+        symbol,
+        timeframe,
+        candlesCount: chartData.length,
+        currentPrice: quoteResponse?.data?.price || chartResponse.meta.latest_price
+      });
+      
     } catch (error) {
-      console.error('❌ Error loading data:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('❌ Error fetching real-time data:', error);
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch data'
+      }));
+      
+      // Fallback to demo data if API fails
+      const fallbackData = generateFallbackData(symbol);
+      setChartData(fallbackData);
+    }
+  };
+  
+  // Generate fallback data for demo purposes
+  const generateFallbackData = (symbol: string): CandleData[] => {
+    console.log('🔄 Generating fallback data for:', symbol);
+    
+    const basePrices: Record<string, number> = {
+      'AAPL': 150,
+      'GOOGL': 140,
+      'MSFT': 380,
+      'TSLA': 200,
+      'BTC/USD': 43500,
+      'ETH/USD': 2650,
+    };
+    
+    const basePrice = basePrices[symbol] || 100;
+    const data: CandleData[] = [];
+    
+    // Generate 30 days of data
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const timeStr = date.toISOString().split('T')[0];
+      
+      const randomFactor = 1 + (Math.random() - 0.5) * 0.1; // ±5% variation
+      const open = basePrice * randomFactor;
+      const high = open * (1 + Math.random() * 0.05); // Up to 5% higher
+      const low = open * (1 - Math.random() * 0.05); // Up to 5% lower
+      const close = low + Math.random() * (high - low);
+      const volume = Math.floor(Math.random() * 1000000) + 100000;
+      
+      data.push({ time: timeStr, open, high, low, close, volume });
+    }
+    
+    return data;
+  };
+
+  // Initialize data stream for real-time updates
+  const startDataStream = () => {
+    if (dataStreamRef.current) {
+      dataStreamRef.current();
+    }
+    
+    const cleanup = tradingApi.createDataStream(
+      symbol,
+      timeframe,
+      30000, // 30 seconds interval
+      (data: ChartData) => {
+        if (data.success && data.data.length > 0) {
+          const chartData: CandleData[] = data.data.map((item: CandlestickData) => ({
+            time: item.time,
+            open: item.open,
+            high: item.high,
+            low: item.low,
+            close: item.close,
+            volume: item.volume
+          }));
+          
+          setChartData(chartData);
+          
+          setState(prev => ({
+            ...prev,
+            currentPrice: data.meta.latest_price,
+            priceChange: data.meta.price_change,
+            priceChangePercent: data.meta.price_change_percent,
+            lastUpdated: new Date(),
+            error: null
+          }));
+          
+          console.log('✅ Stream update:', {
+            symbol,
+            price: data.meta.latest_price,
+            candlesCount: chartData.length
+          });
+        }
+      },
+      (error) => {
+        console.error('❌ Stream error:', error);
+        setState(prev => ({
+          ...prev,
+          error: 'Real-time data stream error'
+        }));
+      }
+    );
+    
+    dataStreamRef.current = cleanup;
+  };
+  
+  const stopDataStream = () => {
+    if (dataStreamRef.current) {
+      dataStreamRef.current();
+      dataStreamRef.current = null;
     }
   };
 
@@ -214,39 +314,7 @@ export default function ProfessionalTradingChart({
     
     console.log('✅ Professional Trading Chart initialized for', symbol);
     
-    // Load realistic BTC candlestick data
-    const immediateData = [
-      { time: '2024-01-01', open: 43500, high: 44200, low: 43200, close: 43800 }, // Green (up)
-      { time: '2024-01-02', open: 43800, high: 44100, low: 43200, close: 43400 }, // Red (down)
-      { time: '2024-01-03', open: 43400, high: 44800, low: 43100, close: 44600 }, // Green (up)
-      { time: '2024-01-04', open: 44600, high: 45100, low: 44200, close: 44300 }, // Red (down)
-      { time: '2024-01-05', open: 44300, high: 45400, low: 44100, close: 45200 }, // Green (up)
-      { time: '2024-01-06', open: 45200, high: 45300, low: 44600, close: 44800 }, // Red (down)
-      { time: '2024-01-07', open: 44800, high: 46000, low: 44600, close: 45900 }, // Green (up)
-      { time: '2024-01-08', open: 45900, high: 46300, low: 45200, close: 45400 }, // Red (down)
-      { time: '2024-01-09', open: 45400, high: 46600, low: 45200, close: 46400 }, // Green (up)
-      { time: '2024-01-10', open: 46400, high: 46900, low: 45800, close: 45900 }, // Red (down)
-      { time: '2024-01-11', open: 45900, high: 47200, low: 45700, close: 47000 }, // Green (up)
-      { time: '2024-01-12', open: 47000, high: 47500, low: 46200, close: 46500 }, // Red (down)
-      { time: '2024-01-13', open: 46500, high: 47800, low: 46300, close: 47600 }, // Green (up)
-      { time: '2024-01-14', open: 47600, high: 47900, low: 46800, close: 47100 }, // Red (down)
-      { time: '2024-01-15', open: 47100, high: 48200, low: 46900, close: 48000 }, // Green (up)
-    ];
-    
-    // Set candlestick data and fit to viewport
-    candlestickSeries.setData(immediateData);
-    chart.timeScale().fitContent();
-    
-    // Update state immediately with latest candle data
-    const latestCandle = immediateData[immediateData.length - 1];
-    const previousCandle = immediateData[immediateData.length - 2];
-    
-    setChartData(immediateData);
-    setCurrentPrice(latestCandle.close);
-    setPriceChange(latestCandle.close - previousCandle.close);
-    setLastUpdated(new Date());
-    
-    console.log('✅ Chart loaded successfully with', immediateData.length, 'candles');
+    console.log('✅ Chart initialized successfully');
 
     // Handle resize
     const resizeObserver = new ResizeObserver(entries => {
@@ -256,11 +324,14 @@ export default function ProfessionalTradingChart({
       }
     });
     
-    resizeObserver.observe(chartContainerRef.current);
+    if (chartContainerRef.current) {
+      resizeObserver.observe(chartContainerRef.current);
+    }
 
     return () => {
       resizeObserver.disconnect();
       chart.remove();
+      stopDataStream();
     };
   }, [height]);
 
@@ -281,28 +352,30 @@ export default function ProfessionalTradingChart({
       seriesRef.current.setData(chartData);
       chartRef.current.timeScale().fitContent();
       
-      console.log('✅ Data set and fitContent called - EXACTLY like BackupWorkingChart');
+    console.log('✅ Data set and chart updated');
       
     } catch (error) {
       console.error('❌ Error updating chart:', error);
     }
   }, [chartData, showVolume]);
 
-  // DISABLE async loading - using immediate data instead
-  // useEffect(() => {
-  //   loadData();
-  // }, [symbol]);
-
-  // Auto refresh
+  // Load initial data when component mounts or symbol changes
   useEffect(() => {
-    if (!autoRefresh) return;
+    fetchRealTimeData(true);
+  }, [symbol, timeframe]);
 
-    const interval = setInterval(() => {
-      loadData();
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, symbol]);
+  // Auto refresh effect
+  useEffect(() => {
+    if (autoRefresh) {
+      startDataStream();
+    } else {
+      stopDataStream();
+    }
+    
+    return () => {
+      stopDataStream();
+    };
+  }, [autoRefresh, symbol, timeframe]);
 
   const formatPrice = (price: number) => {
     if (price < 1) return price.toFixed(6);
@@ -315,11 +388,9 @@ export default function ProfessionalTradingChart({
     return `${sign}${formatPrice(Math.abs(change))}`;
   };
 
-  const changePercent = currentPrice > 0 && priceChange !== 0 
-    ? ((priceChange / (currentPrice - priceChange)) * 100)
-    : 0;
+  const changePercent = state.priceChangePercent;
 
-  if (isLoading && chartData.length === 0) {
+  if (state.isLoading && chartData.length === 0) {
     return (
       <Card className={cn('w-full', className)}>
         <CardHeader>
@@ -355,15 +426,15 @@ export default function ProfessionalTradingChart({
               </CardTitle>
               <div className="flex items-center gap-3 mt-1">
                 <span className="text-2xl font-bold">
-                  ${formatPrice(currentPrice)}
+                  ${formatPrice(state.currentPrice)}
                 </span>
                 <span className={cn(
                   "text-sm font-medium px-2 py-1 rounded",
-                  priceChange >= 0 
+                  state.priceChange >= 0 
                     ? "bg-green-100 text-green-700" 
                     : "bg-red-100 text-red-700"
                 )}>
-                  {formatChange(priceChange)} ({changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%)
+                  {formatChange(state.priceChange)} ({changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%)
                 </span>
               </div>
             </div>
@@ -374,7 +445,7 @@ export default function ProfessionalTradingChart({
               variant={autoRefresh ? "default" : "outline"}
               size="sm"
               onClick={() => setAutoRefresh(!autoRefresh)}
-              disabled={isLoading}
+              disabled={state.isLoading}
             >
               {autoRefresh ? (
                 <><PauseIcon className="h-4 w-4 mr-1" /> Pause</>
@@ -403,18 +474,21 @@ export default function ProfessionalTradingChart({
             <Button
               variant="outline"
               size="sm"
-              onClick={loadData}
-              disabled={isLoading}
+              onClick={() => fetchRealTimeData(true)}
+              disabled={state.isLoading}
             >
-              <ArrowPathIcon className={cn("h-4 w-4", isLoading && "animate-spin")} />
+              <ArrowPathIcon className={cn("h-4 w-4", state.isLoading && "animate-spin")} />
             </Button>
           </div>
         </div>
         
         <div className="text-xs text-muted-foreground">
           {timeframe} • {chartData.length} periods
-          {lastUpdated && (
-            <span className="ml-2">• Updated {lastUpdated.toLocaleTimeString()}</span>
+          {state.lastUpdated && (
+            <span className="ml-2">• Updated {state.lastUpdated.toLocaleTimeString()}</span>
+          )}
+          {state.error && (
+            <span className="ml-2 text-red-500">• {state.error}</span>
           )}
         </div>
       </CardHeader>

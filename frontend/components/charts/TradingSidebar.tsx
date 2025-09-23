@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { tradingApi, PopularSymbol, Quote } from '@/lib/api';
 import {
   ArrowTrendingUpIcon,
   BoltIcon,
@@ -17,23 +18,26 @@ interface TradingSidebarProps {
   onTimeframeChange: (timeframe: string) => void;
 }
 
-const SYMBOLS = [
-  { symbol: 'BTC/USD', name: 'Bitcoin', price: '48,000', change: '+2.34%', trend: 'up', marketCap: '945B', icon: '₿' },
-  { symbol: 'ETH/USD', name: 'Ethereum', price: '2,658', change: '+1.87%', trend: 'up', marketCap: '320B', icon: 'Ξ' },
-  { symbol: 'SOL/USD', name: 'Solana', price: '98.45', change: '-0.92%', trend: 'down', marketCap: '45B', icon: '◎' },
-  { symbol: 'ADA/USD', name: 'Cardano', price: '0.5234', change: '+4.12%', trend: 'up', marketCap: '18B', icon: '₳' },
-  { symbol: 'DOT/USD', name: 'Polkadot', price: '7.82', change: '+0.78%', trend: 'up', marketCap: '12B', icon: '●' },
-  { symbol: 'AVAX/USD', name: 'Avalanche', price: '36.12', change: '-1.23%', trend: 'down', marketCap: '15B', icon: '🔺' },
-];
+const SYMBOL_ICONS: { [key: string]: string } = {
+  'AAPL': '🍎',
+  'GOOGL': '🔍', 
+  'MSFT': '🪟',
+  'TSLA': '⚡',
+  'AMZN': '📦',
+  'NVDA': '🎮',
+  'META': '👥',
+  'NFLX': '🎬',
+  'SPY': '📊',
+  'QQQ': '💹'
+};
 
 const TIMEFRAMES = [
-  { value: '1m', label: '1M', active: false },
-  { value: '5m', label: '5M', active: false },
-  { value: '15m', label: '15M', active: false },
-  { value: '1h', label: '1H', active: false },
-  { value: '4h', label: '4H', active: false },
-  { value: '1d', label: '1D', active: true },
-  { value: '1w', label: '1W', active: false },
+  { value: '1min', label: '1M', active: false },
+  { value: '5min', label: '5M', active: true },
+  { value: '15min', label: '15M', active: false },
+  { value: '30min', label: '30M', active: false },
+  { value: '60min', label: '1H', active: false },
+  { value: 'daily', label: '1D', active: false },
 ];
 
 const TECHNICAL_INDICATORS = [
@@ -50,8 +54,52 @@ export default function TradingSidebar({
   onSymbolChange,
   onTimeframeChange
 }: TradingSidebarProps) {
-  const [selectedTimeframe, setSelectedTimeframe] = useState('1d');
-  const [watchlist, setWatchlist] = useState<string[]>(['BTC/USD', 'ETH/USD']);
+  const [selectedTimeframe, setSelectedTimeframe] = useState('5min');
+  const [watchlist, setWatchlist] = useState<string[]>(['AAPL', 'TSLA']);
+  const [popularSymbols, setPopularSymbols] = useState<PopularSymbol[]>([]);
+  const [quotes, setQuotes] = useState<{ [key: string]: Quote }>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch popular symbols and quotes
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch popular symbols
+        const symbolsResponse = await tradingApi.getPopularSymbols();
+        if (symbolsResponse.success) {
+          setPopularSymbols(symbolsResponse.data.symbols);
+          
+          // Fetch quotes for popular symbols
+          const symbolsList = symbolsResponse.data.symbols.map(s => s.symbol);
+          const quotesData = await tradingApi.getMultipleQuotes(symbolsList);
+          setQuotes(quotesData);
+        }
+      } catch (error) {
+        console.error('Error fetching sidebar data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+    
+    // Refresh quotes every 30 seconds
+    const interval = setInterval(async () => {
+      if (popularSymbols.length > 0) {
+        try {
+          const symbolsList = popularSymbols.map(s => s.symbol);
+          const quotesData = await tradingApi.getMultipleQuotes(symbolsList);
+          setQuotes(quotesData);
+        } catch (error) {
+          console.error('Error refreshing quotes:', error);
+        }
+      }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const handleTimeframeClick = (timeframe: string) => {
     setSelectedTimeframe(timeframe);
@@ -64,6 +112,16 @@ export default function TradingSidebar({
         ? prev.filter(s => s !== symbolName)
         : [...prev, symbolName]
     );
+  };
+  
+  const formatPrice = (price: number) => {
+    if (price < 1) return price.toFixed(4);
+    if (price < 100) return price.toFixed(2);
+    return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  
+  const formatChange = (change: number) => {
+    return change >= 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`;
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -115,67 +173,83 @@ export default function TradingSidebar({
             <ArrowTrendingUpIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
             📈 Market Overview
           </CardTitle>
-          <div className="text-xs text-muted-foreground mt-1">Live cryptocurrency prices</div>
+          <div className="text-xs text-muted-foreground mt-1">Live market prices via Alpha Vantage</div>
         </CardHeader>
         <CardContent className="space-y-2 p-3">
-          {SYMBOLS.map((item) => (
-            <div
-              key={item.symbol}
-              className={cn(
-                "flex items-center justify-between p-3 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
-                symbol === item.symbol 
-                  ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 shadow-md" 
-                  : "bg-muted/50 border-border hover:bg-muted"
-              )}
-              onClick={() => onSymbolChange(item.symbol)}
-            >
-              <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-background shadow-sm">
-                  <span className="text-sm font-bold text-foreground">{item.icon}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1">
-                    <span className="font-bold text-xs text-foreground">{item.symbol}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleWatchlist(item.symbol);
-                      }}
-                      className="h-4 w-4 p-0 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 rounded-full"
-                    >
-                      <BookmarkIcon 
-                        className={cn(
-                          "h-2.5 w-2.5 transition-colors",
-                          watchlist.includes(item.symbol) ? "fill-current text-yellow-500" : "text-muted-foreground hover:text-yellow-500"
-                        )} 
-                      />
-                    </Button>
-                  </div>
-                  <div className="text-xs text-muted-foreground font-medium truncate">{item.name}</div>
-                  <div className="text-xs text-muted-foreground/70">MCap: ${item.marketCap}</div>
-                </div>
-              </div>
-              
-              <div className="text-right">
-                <div className="font-bold text-xs text-foreground">${item.price}</div>
-                <div className={cn(
-                  "text-xs flex items-center gap-1 font-semibold px-1.5 py-0.5 rounded-full",
-                  item.trend === 'up' 
-                    ? "text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/50" 
-                    : "text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/50"
-                )}>
-                  {item.trend === 'up' ? (
-                    <ArrowUpIcon className="h-2.5 w-2.5" />
-                  ) : (
-                    <ArrowDownIcon className="h-2.5 w-2.5" />
-                  )}
-                  {item.change}
-                </div>
-              </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center p-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
-          ))}
+          ) : (
+            popularSymbols.map((item) => {
+              const quote = quotes[item.symbol];
+              const change = quote ? parseFloat(quote.change_percent) : 0;
+              const trend = change >= 0 ? 'up' : 'down';
+              
+              return (
+                <div
+                  key={item.symbol}
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-md hover:scale-[1.01]",
+                    symbol === item.symbol 
+                      ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 shadow-md" 
+                      : "bg-muted/50 border-border hover:bg-muted"
+                  )}
+                  onClick={() => onSymbolChange(item.symbol)}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-background shadow-sm">
+                      <span className="text-sm font-bold text-foreground">
+                        {SYMBOL_ICONS[item.symbol] || '📊'}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className="font-bold text-xs text-foreground">{item.symbol}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleWatchlist(item.symbol);
+                          }}
+                          className="h-4 w-4 p-0 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 rounded-full"
+                        >
+                          <BookmarkIcon 
+                            className={cn(
+                              "h-2.5 w-2.5 transition-colors",
+                              watchlist.includes(item.symbol) ? "fill-current text-yellow-500" : "text-muted-foreground hover:text-yellow-500"
+                            )} 
+                          />
+                        </Button>
+                      </div>
+                      <div className="text-xs text-muted-foreground font-medium truncate">{item.name}</div>
+                      <div className="text-xs text-muted-foreground/70">{item.type}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className="font-bold text-xs text-foreground">
+                      ${quote ? formatPrice(quote.price) : '--'}
+                    </div>
+                    <div className={cn(
+                      "text-xs flex items-center gap-1 font-semibold px-1.5 py-0.5 rounded-full",
+                      trend === 'up' 
+                        ? "text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/50" 
+                        : "text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/50"
+                    )}>
+                      {trend === 'up' ? (
+                        <ArrowUpIcon className="h-2.5 w-2.5" />
+                      ) : (
+                        <ArrowDownIcon className="h-2.5 w-2.5" />
+                      )}
+                      {quote ? formatChange(change) : '--'}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </CardContent>
       </Card>
 
