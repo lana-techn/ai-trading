@@ -4,4 +4,3 @@ export { Badge, TradingActionBadge, StatusBadge } from './Badge';
 
 // Re-export existing components
 export { ThemeToggle } from './ThemeToggle';
-export { SimpleThemeToggle } from './SimpleThemeToggle';

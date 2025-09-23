@@ -6,15 +6,8 @@ import {
   XIcon,
   SendIcon,
   BrainIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
-  BarChart3Icon,
-  ZapIcon,
   RefreshCwIcon,
-  SparklesIcon,
-  MicIcon,
-  ImageIcon,
-  PlusIcon
+  SparklesIcon
 } from 'lucide-react';
 
 interface ChatMessage {

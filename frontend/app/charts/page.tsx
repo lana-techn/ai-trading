@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ChartBarIcon } from '@heroicons/react/24/outline';
 import CandlestickChart from '@/components/charts/CandlestickChart';
-import ChartBottomSections from '@/components/charts/ChartBottomSections';
 import { cn } from '@/lib/utils';
 
 export default function ChartsPage() {
   const [selectedSymbol, setSelectedSymbol] = useState('AAPL');
-  const [selectedTimeframe, setSelectedTimeframe] = useState('1d');
+  const selectedTimeframe = '1d';
   const [assetType, setAssetType] = useState<'stocks' | 'crypto'>('stocks');
   
 
@@ -127,7 +126,20 @@ export default function ChartsPage() {
               </p>
             </div>
             <div className="p-6">
-              <ChartBottomSections />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 p-4 rounded-lg border border-blue-200/50 dark:border-blue-700/50">
+                  <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">📊 Technical Analysis</h3>
+                  <p className="text-sm text-blue-600 dark:text-blue-300">Advanced indicators and pattern recognition</p>
+                </div>
+                <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 p-4 rounded-lg border border-green-200/50 dark:border-green-700/50">
+                  <h3 className="font-semibold text-green-800 dark:text-green-200 mb-2">💰 Market Insights</h3>
+                  <p className="text-sm text-green-600 dark:text-green-300">Real-time market data and trends</p>
+                </div>
+                <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 p-4 rounded-lg border border-purple-200/50 dark:border-purple-700/50">
+                  <h3 className="font-semibold text-purple-800 dark:text-purple-200 mb-2">🤖 AI Analysis</h3>
+                  <p className="text-sm text-purple-600 dark:text-purple-300">Powered by advanced AI models</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
