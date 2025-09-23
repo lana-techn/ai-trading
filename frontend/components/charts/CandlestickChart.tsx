@@ -14,6 +14,7 @@ import {
   Volume2
 } from 'lucide-react';
 import { generateCandlestickData, MarketData } from '@/lib/mock-data';
+import AIInsights from '@/components/ai/AIInsights';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -458,21 +459,32 @@ export default function CandlestickChart({
           </div>
         </div>
 
-        {/* Charts */}
-        <div className="space-y-4">
-          <Chart
-            options={candlestickOptions}
-            series={candlestickSeries}
-            type="candlestick"
-            height={height * 0.7}
-          />
+        {/* Charts and AI Analysis Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Charts Column */}
+          <div className="lg:col-span-2 space-y-4">
+            <Chart
+              options={candlestickOptions}
+              series={candlestickSeries}
+              type="candlestick"
+              height={height * 0.7}
+            />
+            
+            <Chart
+              options={volumeOptions}
+              series={volumeSeries}
+              type="area"
+              height={height * 0.3}
+            />
+          </div>
           
-          <Chart
-            options={volumeOptions}
-            series={volumeSeries}
-            type="area"
-            height={height * 0.3}
-          />
+          {/* AI Insights Column */}
+          <div className="lg:col-span-1">
+            <AIInsights 
+              symbol={symbol}
+              className="h-fit"
+            />
+          </div>
         </div>
 
         {/* Enhanced Stats with Modern Design */}

@@ -26,6 +26,9 @@ from app.services.websocket.websocket_manager import (
 )
 from app.utils.logger import get_logger, log_startup_info, audit_logger
 
+# Import AI Analysis router
+from api.ai_analysis import router as ai_analysis_router
+
 logger = get_logger(__name__)
 
 
@@ -143,6 +146,9 @@ app.add_middleware(
     TrustedHostMiddleware, 
     allowed_hosts=["localhost", "127.0.0.1", "*.vercel.app"]
 )
+
+# Include routers
+app.include_router(ai_analysis_router)
 
 
 # Middleware for request logging and performance monitoring
