@@ -342,7 +342,251 @@ body {
   @apply focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2;
 }
 
+/* Text utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* Tiptap Editor Styling */
+.tiptap-content {
+  color: hsl(var(--card-foreground));
+  line-height: 1.7;
+  font-size: 1.1rem;
+}
+
+.tiptap-content h1,
+.tiptap-content h2,
+.tiptap-content h3,
+.tiptap-content h4,
+.tiptap-content h5,
+.tiptap-content h6 {
+  color: hsl(var(--card-foreground));
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.tiptap-content h1 {
+  font-size: 2.25rem;
+  border-bottom: 3px solid hsl(var(--chart-1));
+  padding-bottom: 0.5rem;
+}
+
+.tiptap-content h2 {
+  font-size: 1.875rem;
+  color: hsl(var(--chart-1));
+}
+
+.tiptap-content h3 {
+  font-size: 1.5rem;
+  color: hsl(var(--chart-2));
+}
+
+.tiptap-content h4 {
+  font-size: 1.25rem;
+}
+
+.tiptap-content p {
+  margin-bottom: 1.5rem;
+  line-height: 1.8;
+}
+
+.tiptap-content ul,
+.tiptap-content ol {
+  margin-bottom: 1.5rem;
+  padding-left: 1.5rem;
+}
+
+.tiptap-content li {
+  margin-bottom: 0.75rem;
+  line-height: 1.7;
+}
+
+.tiptap-content ul {
+  list-style: none;
+}
+
+.tiptap-content ul li {
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.tiptap-content ul li::before {
+  content: '✨';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: hsl(var(--chart-2));
+}
+
+.tiptap-content ol {
+  counter-reset: list-counter;
+}
+
+.tiptap-content ol li {
+  position: relative;
+  padding-left: 2rem;
+  counter-increment: list-counter;
+}
+
+.tiptap-content ol li::before {
+  content: counter(list-counter);
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: hsl(var(--chart-1));
+  color: white;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.tiptap-content mark,
+.tiptap-content [data-type="highlight"] {
+  background: hsl(var(--chart-1) / 0.15);
+  color: hsl(var(--chart-1));
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+}
+
+/* Task Lists */
+.tiptap-content ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tiptap-content ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  padding-left: 0;
+}
+
+.tiptap-content ul[data-type="taskList"] li::before {
+  display: none;
+}
+
+.tiptap-content ul[data-type="taskList"] li label {
+  margin-right: 0.75rem;
+  user-select: none;
+}
+
+.tiptap-content ul[data-type="taskList"] li input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 2px solid hsl(var(--border));
+  border-radius: 0.25rem;
+  margin: 0;
+  cursor: default;
+}
+
+.tiptap-content ul[data-type="taskList"] li input[type="checkbox"]:checked {
+  background: hsl(var(--chart-2));
+  border-color: hsl(var(--chart-2));
+}
+
+/* Tables */
+.tiptap-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.5rem 0;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.tiptap-content th,
+.tiptap-content td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.tiptap-content th {
+  background: hsl(var(--muted));
+  font-weight: 600;
+  color: hsl(var(--card-foreground));
+}
+
+.tiptap-content tr:nth-child(even) {
+  background: hsl(var(--muted) / 0.5);
+}
+
+/* Blockquotes */
+.tiptap-content blockquote {
+  border-left: 4px solid hsl(var(--chart-4));
+  padding-left: 1rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted) / 0.3);
+  border-radius: 0 0.5rem 0.5rem 0;
+  padding: 1rem;
+}
+
+/* Code blocks */
+.tiptap-content pre {
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+.tiptap-content code {
+  background: hsl(var(--muted));
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  color: hsl(var(--chart-3));
+  font-weight: 600;
+}
+
 /* Animation utilities */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .animate-in {
   animation: slideUp 0.3s ease-out;
 }

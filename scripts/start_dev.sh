@@ -43,8 +43,11 @@ echo ""
 echo "📱 Frontend: http://localhost:3000"
 echo "🤖 Backend:  http://localhost:8000"
 echo "💬 AI Chat:  http://localhost:3000/chat"
+echo "💬 AI Chat:  http://localhost:3000/analysis"
+echo "💬 AI Chat:  http://localhost:3000/tutorials"
 echo ""
 echo "Press Ctrl+C to stop all servers"
 
 # Wait for background processes
 wait $BACKEND_PID $FRONTEND_PID
+

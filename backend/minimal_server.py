@@ -6,6 +6,16 @@ Minimal FastAPI server for AI Chat and Alpha Vantage integration
 import os
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables
+env_path = Path(__file__).parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+    print(f"✅ Loaded environment from {env_path}")
+else:
+    print(f"⚠️  No .env file found at {env_path}")
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -508,6 +518,14 @@ class ChartDataResponse(BaseModel):
     meta: Dict[str, Any]
     timestamp: str
     error: Optional[str] = None
+
+# Include tutorial routes
+try:
+    from app.routes.tutorials import router as tutorial_router
+    app.include_router(tutorial_router)
+    print("✅ Tutorial routes loaded successfully")
+except ImportError as e:
+    print(f"⚠️  Tutorial routes not available: {e}")
 
 # Routes
 @app.get("/")

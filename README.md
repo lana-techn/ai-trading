@@ -152,6 +152,19 @@ pnpm test                # Run tests
 ./scripts/test_setup.sh   # Verify migration and configuration
 ```
 
+## 📚 Trading Education
+
+### 🎯 Ready for Real Trading?
+Transition from paper trading to real money with comprehensive guidance:
+- [Ready for Real Trading Guide](docs/READY_FOR_REAL_TRADING.md) - Complete transition strategy
+- [Risk Management Guide](docs/RISK_MANAGEMENT_GUIDE.md) - Internal comprehensive risk education  
+- [External Risk Resources](docs/EXTERNAL_RISK_RESOURCES.md) - Curated professional resources
+- [Quick Start Guide](docs/QUICKSTART.md) - Get up and running fast
+
+> ⚠️ **Trading Disclaimer**: All trading involves significant financial risk. These educational materials are for informational purposes only. Never invest more than you can afford to lose.
+
+---
+
 ## 🔧 Development
 
 ### Project Structure

@@ -56,7 +56,8 @@ npm run dev
 
 ### 📱 Akses Aplikasi
 - **Frontend**: http://localhost:3000
-- **AI Chat**: http://localhost:3000/chat  
+- **AI Chat**: http://localhost:3000/chat
+- **Trading Tutorials**: http://localhost:3000/tutorials
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
 
@@ -101,11 +102,19 @@ chmod +x *.sh
 
 ### 🎮 Fitur Yang Bisa Ditest
 
-1. **Buka Browser**: http://localhost:3000/chat
-2. **Test Chat**: Ketik pertanyaan tentang trading
-3. **Test Format**: Lihat response AI dengan formatting yang baik
-4. **Test Theme**: Toggle light/dark mode
-5. **Test Suggestions**: Klik suggestion buttons
+1. **AI Chat**: http://localhost:3000/chat
+   - Ketik pertanyaan tentang trading
+   - Test response formatting dan suggestions
+   
+2. **Trading Tutorials**: http://localhost:3000/tutorials
+   - Browse comprehensive trading guides
+   - Search and filter by category/difficulty
+   - Read detailed tutorial sections
+   
+3. **UI Features**:
+   - Toggle light/dark mode
+   - Responsive design (mobile/desktop)
+   - Navigation between pages
 
 ### 📊 Expected Behavior
 

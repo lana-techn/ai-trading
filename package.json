@@ -38,6 +38,7 @@
   "packageManager": "pnpm@10.7.0",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "alphavantage": "^2.5.0"
+    "alphavantage": "^2.5.0",
+    "react-hook-form": "^7.63.0"
   }
 }
