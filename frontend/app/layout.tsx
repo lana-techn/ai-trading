@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import DashboardLayout from '@/components/layout/DashboardLayout';
+import LandingLayout from '@/components/layout/LandingLayout';
 import { SmoothThemeProvider } from '@/components/providers/SmoothThemeProvider';
 
 const inter = Inter({
@@ -21,11 +21,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${inter.className} antialiased scroll-smooth`} style={{ scrollBehavior: 'smooth' }}>
         <SmoothThemeProvider>
-          <DashboardLayout>
+          <LandingLayout>
             {children}
-          </DashboardLayout>
+          </LandingLayout>
         </SmoothThemeProvider>
       </body>
     </html>
