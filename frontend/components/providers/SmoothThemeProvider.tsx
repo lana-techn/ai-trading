@@ -9,76 +9,23 @@ export function SmoothThemeProvider({ children, ...props }: ThemeProviderProps) 
     // Add CSS for smooth transitions
     const style = document.createElement('style');
     style.textContent = `
-      /* Smooth theme transition for all elements */
+      /* Optimized theme transition - only essential properties */
       *,
       *::before,
       *::after {
-        transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    fill 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    stroke 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    backdrop-filter 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-      }
-      
-      /* Smooth transitions for gradients */
-      .bg-gradient-to-r,
-      .bg-gradient-to-l,
-      .bg-gradient-to-t,
-      .bg-gradient-to-b,
-      .bg-gradient-to-br,
-      .bg-gradient-to-bl,
-      .bg-gradient-to-tr,
-      .bg-gradient-to-tl {
-        transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition: background-color 0.15s ease,
+                    border-color 0.15s ease,
+                    color 0.15s ease !important;
       }
       
       /* Theme switching animation */
       html {
-        transition: color-scheme 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition: color-scheme 0.1s ease !important;
       }
       
-      /* Prevent flash during theme switch */
+      /* Instant theme switch for better performance */
       html.theme-transitioning * {
-        transition-duration: 0.1s !important;
-      }
-      
-      /* Smooth scrollbar theme transition */
-      ::-webkit-scrollbar {
-        transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-      }
-      
-      ::-webkit-scrollbar-thumb {
-        transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-      }
-      
-      /* Special handling for charts and complex components */
-      .apexcharts-canvas,
-      .apexcharts-svg,
-      canvas {
-        transition: opacity 0.2s ease-in-out !important;
-      }
-      
-      /* Smooth transitions for custom properties */
-      :root {
-        transition: 
-          --background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --foreground 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --card 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --card-foreground 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --primary 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --primary-foreground 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --secondary 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --secondary-foreground 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --muted 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --muted-foreground 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --accent 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --accent-foreground 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --border 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --input 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          --ring 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition-duration: 0.05s !important;
       }
     `;
     document.head.appendChild(style);
@@ -91,7 +38,7 @@ export function SmoothThemeProvider({ children, ...props }: ThemeProviderProps) 
       // Remove after transition completes
       setTimeout(() => {
         document.documentElement.classList.remove('theme-transitioning');
-      }, 150);
+      }, 100);
     };
     
     // Listen for theme changes
