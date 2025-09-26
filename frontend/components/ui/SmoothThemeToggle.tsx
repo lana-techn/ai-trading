@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
+import { optimizeThemeSwitch } from '@/lib/theme-utils';
 
 interface SmoothThemeToggleProps {
   className?: string;
@@ -74,14 +75,21 @@ export function SmoothThemeToggle({
   const resolvedTheme = theme === 'system' ? systemTheme : theme;
 
   const handleThemeChange = (newTheme: string) => {
+    if (isTransitioning) return;
+    
     setIsTransitioning(true);
+    
+    // Optimize theme switching for instant change
+    optimizeThemeSwitch();
+    
+    // Apply theme immediately
     setTheme(newTheme);
     setIsOpen(false);
     
-    // Reset transition state
+    // Reset transition state quickly
     setTimeout(() => {
       setIsTransitioning(false);
-    }, 300);
+    }, 75);
   };
 
   const cycleTheme = () => {
