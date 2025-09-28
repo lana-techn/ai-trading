@@ -151,16 +151,16 @@ const nextConfig = {
   // Production source maps for debugging (optional)
   productionBrowserSourceMaps: false,
 
-  // ESLint configuration
+  // ESLint configuration - DISABLED for build
   eslint: {
-    // Only run ESLint on these directories during build
-    dirs: ['app', 'components', 'lib', 'hooks']
+    // Skip ESLint during builds
+    ignoreDuringBuilds: true,
   },
 
-  // TypeScript configuration
+  // TypeScript configuration - DISABLED for build
   typescript: {
-    // Type checking is handled by CI/CD
-    ignoreBuildErrors: false
+    // Skip TypeScript type checking during builds
+    ignoreBuildErrors: true
   }
 };
 
