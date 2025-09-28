@@ -13,12 +13,10 @@ import {
   BoltIcon,
   SparklesIcon,
   BookOpenIcon,
-  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import { useIntersectionObserver, usePerformanceMonitoring } from '@/lib/performance';
 import { HeroSkeleton } from '@/components/ui/skeleton';
-import { BentoGrid, BentoHero, BentoStat, BentoCard } from '@/components/ui/BentoGrid';
 
 // Real-time market data
 const initialMarketData = {
@@ -45,7 +43,7 @@ const FLOATING_ICONS = [
 const HeroSection = memo(function HeroSection() {
   const [mounted, setMounted] = useState(false);
   const { ref, hasIntersected } = useIntersectionObserver({ threshold: 0.1 });
-  const { renderCount } = usePerformanceMonitoring('HeroSection');
+  usePerformanceMonitoring('HeroSection');
   
   // Container Scroll Animation - Safe for SSR
   const containerRef = useRef<HTMLDivElement>(null);
@@ -75,10 +73,10 @@ const HeroSection = memo(function HeroSection() {
   }, [scrollProgress, scaleDimensions]);
   
   // Throttle function for performance
-  const throttle = useCallback((func: Function, delay: number) => {
+  const throttle = useCallback((func: (...args: unknown[]) => void, delay: number) => {
     let timeoutId: NodeJS.Timeout;
     let lastExecTime = 0;
-    return (...args: any[]) => {
+    return (...args: unknown[]) => {
       const currentTime = Date.now();
       if (currentTime - lastExecTime > delay) {
         func(...args);
@@ -135,8 +133,11 @@ const HeroSection = memo(function HeroSection() {
         const newData = { ...prev };
         Object.keys(newData).forEach(key => {
           const fluctuation = (Math.random() - 0.5) * 0.015;
-          newData[key].price = Math.round((newData[key].price * (1 + fluctuation)) * 100) / 100;
-          newData[key].change = Math.round((newData[key].change + fluctuation * 100) * 100) / 100;
+          const marketItem = newData[key as keyof typeof newData];
+          if (marketItem) {
+            marketItem.price = Math.round((marketItem.price * (1 + fluctuation)) * 100) / 100;
+            marketItem.change = Math.round((marketItem.change + fluctuation * 100) * 100) / 100;
+          }
         });
         return newData;
       });
@@ -162,7 +163,7 @@ const HeroSection = memo(function HeroSection() {
       'content': -0.15
     };
     
-    const styles: Record<string, any> = {};
+    const styles: Record<string, React.CSSProperties> = {};
     Object.keys(speeds).forEach(elementId => {
       const speed = speeds[elementId];
       styles[elementId] = {
@@ -443,14 +444,14 @@ const HeroSection = memo(function HeroSection() {
                     gray: { bg: "bg-gray-600", text: data.change >= 0 ? "text-green-400" : "text-red-400", gradient: data.change >= 0 ? "from-green-500/20 to-green-400/40" : "from-red-500/20 to-red-400/40" }
                   };
                   
-                  const colors = colorMap[data.color];
+                  const colors = colorMap[data.color as keyof typeof colorMap];
                   const symbolIcons = { BTC: "₿", ETH: "E", TSLA: "T", AAPL: "A" };
                   
                   return (
                     <div key={symbol} className="bg-zinc-800/50 backdrop-blur-sm p-3 rounded-lg border border-zinc-700/50 transition-all duration-300 hover:bg-zinc-800/70">
                       <div className="flex items-center space-x-2 mb-2">
                         <div className={`w-6 h-6 ${colors.bg} rounded-full flex items-center justify-center text-xs font-bold text-white`}>
-                          {symbolIcons[symbol]}
+                          {symbolIcons[symbol as keyof typeof symbolIcons]}
                         </div>
                         <span className="text-sm font-semibold text-white">{symbol}</span>
                       </div>

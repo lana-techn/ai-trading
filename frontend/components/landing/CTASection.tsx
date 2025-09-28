@@ -69,7 +69,7 @@ export default function CTASection() {
 
             {/* Subtitle */}
             <p className="text-xl text-primary-foreground/80 mb-12 max-w-3xl mx-auto leading-relaxed">
-              Join thousands of traders who've already discovered the power of AI-driven market analysis.
+              Join thousands of traders who&apos;ve already discovered the power of AI-driven market analysis.
               Start your journey to smarter trading today.
             </p>
           </div>

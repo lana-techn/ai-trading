@@ -92,7 +92,7 @@ function AnimatedCounter({ value, suffix, duration = 2000, start = false }: Anim
 export default function StatsSection() {
   const [mounted, setMounted] = useState(false);
   const [startAnimation, setStartAnimation] = useState(false);
-  const sectionRef = useRef<HTMLElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -116,12 +116,12 @@ export default function StatsSection() {
   }, []);
 
   return (
-    <BentoSection 
-      ref={sectionRef}
-      title="Trusted by Traders Worldwide"
-      subtitle="Join thousands of traders who rely on our AI-powered platform for intelligent market decisions"
-      className="bg-secondary/30"
-    >
+    <div ref={sectionRef}>
+      <BentoSection 
+        title="Trusted by Traders Worldwide"
+        subtitle="Join thousands of traders who rely on our AI-powered platform for intelligent market decisions"
+        className="bg-secondary/30"
+      >
       {STATS.map((stat, index) => (
         <BentoStat key={index}>
           <div className={cn(
@@ -173,6 +173,7 @@ export default function StatsSection() {
           </div>
         </div>
       </BentoCTA>
-    </BentoSection>
+      </BentoSection>
+    </div>
   );
 }

@@ -10,8 +10,6 @@ import {
   ChartBarIcon,
   BoltIcon,
   ShieldCheckIcon,
-  ClockIcon,
-  SparklesIcon,
   ArrowTrendingUpIcon,
   ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
@@ -66,7 +64,6 @@ const FEATURES = [
 ];
 
 const FeaturesSection = memo(function FeaturesSection() {
-  const [mounted, setMounted] = useState(false);
   const [visibleCards, setVisibleCards] = useState<number[]>([]);
   const { ref, hasIntersected } = useIntersectionObserver({ threshold: 0.2 });
 
@@ -82,8 +79,6 @@ const FeaturesSection = memo(function FeaturesSection() {
   }, [features]);
 
   useEffect(() => {
-    setMounted(true);
-    
     if (hasIntersected) {
       staggerAnimations();
     }
