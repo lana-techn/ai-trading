@@ -1,11 +1,21 @@
 'use client';
 
 import { Card, CardContent, Button } from '@/components/ui';
-import { cn } from '@/lib/utils';
 import { ClockIcon } from '@heroicons/react/24/outline';
 
+interface Transaction {
+  id: number;
+  type: 'buy' | 'sell';
+  symbol: string;
+  quantity: number;
+  price: number;
+  value: number;
+  date: string;
+  fees: number;
+}
+
 interface TransactionHistoryProps {
-  transactions: any[];
+  transactions: Transaction[];
   showBalance: boolean;
 }
 

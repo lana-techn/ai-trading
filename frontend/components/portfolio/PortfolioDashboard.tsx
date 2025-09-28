@@ -15,8 +15,40 @@ import {
 // Dynamic import for ApexCharts
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
+interface Holding {
+  symbol: string;
+  name: string;
+  quantity: number;
+  avgPrice: number;
+  currentPrice: number;
+  value: number;
+  gainLoss: number;
+  gainLossPercent: number;
+}
+
+interface PortfolioData {
+  totalValue: number;
+  totalGainLoss: number;
+  totalGainLossPercent: number;
+  dayChange: number;
+  dayChangePercent: number;
+  holdings: Holding[];
+  transactions: Transaction[];
+}
+
+interface Transaction {
+  id: number;
+  type: 'buy' | 'sell';
+  symbol: string;
+  quantity: number;
+  price: number;
+  value: number;
+  date: string;
+  fees: number;
+}
+
 interface PortfolioDashboardProps {
-  portfolioData: any;
+  portfolioData: PortfolioData;
   showBalance: boolean;
 }
 
@@ -36,13 +68,13 @@ export default function PortfolioDashboard({ portfolioData, showBalance }: Portf
 
   // Portfolio allocation data for pie chart
   const allocationData = {
-    series: portfolioData.holdings.map((h: any) => h.value),
+    series: portfolioData.holdings.map((h: Holding) => h.value),
     options: {
       chart: {
         type: 'donut' as const,
         height: 380
       },
-      labels: portfolioData.holdings.map((h: any) => h.symbol),
+      labels: portfolioData.holdings.map((h: Holding) => h.symbol),
       colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'],
       plotOptions: {
         pie: {
@@ -58,8 +90,8 @@ export default function PortfolioDashboard({ portfolioData, showBalance }: Portf
               value: {
                 show: true,
                 fontSize: '14px',
-                formatter: function (val: any) {
-                  return showBalance ? `$${(val).toLocaleString()}` : '••••••';
+                formatter: function (val: string) {
+                  return showBalance ? `$${parseFloat(val).toLocaleString()}` : '••••••';
                 }
               },
               total: {
@@ -128,7 +160,7 @@ export default function PortfolioDashboard({ portfolioData, showBalance }: Portf
       },
       tooltip: {
         y: {
-          formatter: function (val: any) {
+          formatter: function (val: number) {
             return showBalance ? formatCurrency(val) : '••••••';
           }
         }
@@ -150,12 +182,12 @@ export default function PortfolioDashboard({ portfolioData, showBalance }: Portf
             </div>
             <div className="space-y-1">
               <div className="text-lg font-bold text-foreground">
-                {portfolioData.holdings.reduce((best: any, current: any) => 
+                {portfolioData.holdings.reduce((best: Holding, current: Holding) => 
                   current.gainLossPercent > best.gainLossPercent ? current : best
                 ).symbol}
               </div>
               <div className="text-sm text-green-600 dark:text-green-400 font-medium">
-                {formatPercentage(Math.max(...portfolioData.holdings.map((h: any) => h.gainLossPercent)))}
+                {formatPercentage(Math.max(...portfolioData.holdings.map((h: Holding) => h.gainLossPercent)))}
               </div>
             </div>
           </CardContent>
@@ -247,7 +279,7 @@ export default function PortfolioDashboard({ portfolioData, showBalance }: Portf
             <h3 className="text-lg font-semibold text-foreground">Top Holdings</h3>
           </div>
           <div className="space-y-4">
-            {portfolioData.holdings.slice(0, 5).map((holding: any, index: number) => (
+            {portfolioData.holdings.slice(0, 5).map((holding: Holding, index: number) => (
               <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm">

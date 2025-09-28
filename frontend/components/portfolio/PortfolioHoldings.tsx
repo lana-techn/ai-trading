@@ -4,8 +4,19 @@ import { Card, CardContent } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { BanknotesIcon } from '@heroicons/react/24/outline';
 
+interface Holding {
+  symbol: string;
+  name: string;
+  quantity: number;
+  avgPrice: number;
+  currentPrice: number;
+  value: number;
+  gainLoss: number;
+  gainLossPercent: number;
+}
+
 interface PortfolioHoldingsProps {
-  holdings: any[];
+  holdings: Holding[];
   showBalance: boolean;
 }
 
