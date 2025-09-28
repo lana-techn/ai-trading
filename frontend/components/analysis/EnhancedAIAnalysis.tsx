@@ -19,7 +19,6 @@ import {
   ArrowPathIcon,
   ChartPieIcon,
   AcademicCapIcon,
-  BeakerIcon,
   PlayIcon,
   PauseIcon,
   CheckCircleIcon,
@@ -27,15 +26,8 @@ import {
   ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { tradingApi, AnalysisRequest, AnalysisResponse, handleApiError, PriceData } from '@/lib/api';
-import { 
-  cn, 
-  formatPercentage, 
-  getActionColor,
-  getRiskColor,
-  getConfidenceColor,
-  isValidSymbol,
-} from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle, Button, TradingActionBadge, Badge } from '@/components/ui';
+import { cn, isValidSymbol } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle, Button, Badge } from '@/components/ui';
 
 interface AnalysisFormData {
   symbol: string;
@@ -45,13 +37,16 @@ interface AnalysisFormData {
   analysis_type: 'quick' | 'detailed' | 'comprehensive';
 }
 
-interface ModelPerformance {
-  model: string;
-  accuracy: number;
-  avg_confidence: number;
-  success_rate: number;
-  avg_execution_time: number;
+interface AnalysisHistory {
+  id: string;
+  symbol: string;
+  timestamp: string;
+  action: 'buy' | 'sell' | 'hold';
+  confidence: number;
+  result?: 'correct' | 'incorrect' | 'pending';
+  actual_outcome?: number;
 }
+
 
 interface AnalysisHistory {
   id: string;
@@ -98,17 +93,37 @@ const ANALYSIS_TYPES = [
   { value: 'comprehensive', label: 'Deep Analysis', description: 'Full AI assessment (~30s)', icon: AcademicCapIcon },
 ];
 
+// Mock model performance data for the performance tab
+const modelPerformance = [
+  {
+    model: 'Qwen',
+    accuracy: 87,
+    avg_confidence: 82,
+    success_rate: 85,
+    avg_execution_time: 1250,
+  },
+  {
+    model: 'Gemini',
+    accuracy: 84,
+    avg_confidence: 78,
+    success_rate: 82,
+    avg_execution_time: 2100,
+  },
+  {
+    model: 'Hybrid',
+    accuracy: 91,
+    avg_confidence: 89,
+    success_rate: 88,
+    avg_execution_time: 1850,
+  },
+];
+
 export default function EnhancedAIAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [realtimePrice, setRealtimePrice] = useState<PriceData | null>(null);
   const [analysisHistory, setAnalysisHistory] = useState<AnalysisHistory[]>([]);
-  const [modelPerformance] = useState<ModelPerformance[]>([
-    { model: 'Qwen', accuracy: 78.5, avg_confidence: 82.3, success_rate: 74.2, avg_execution_time: 1240 },
-    { model: 'Gemini', accuracy: 81.2, avg_confidence: 79.8, success_rate: 77.9, avg_execution_time: 1890 },
-    { model: 'Hybrid', accuracy: 84.7, avg_confidence: 85.1, success_rate: 82.3, avg_execution_time: 1650 },
-  ]);
   const [currentTab, setCurrentTab] = useState<'analysis' | 'history' | 'performance'>('analysis');
   const [isAutoRefresh, setIsAutoRefresh] = useState(false);
 
@@ -303,8 +318,8 @@ export default function EnhancedAIAnalysis() {
               
               <div className="bg-muted/50 rounded-lg p-4 border border-border">
                 <p className="text-foreground text-base leading-relaxed mb-3">
-                  🎯 <strong>Advanced hybrid AI analysis</strong> combining <span className="text-blue-600 dark:text-blue-400 font-semibold">Qwen's technical expertise</span> 
-                  with <span className="text-green-600 dark:text-green-400 font-semibold">Gemini's visual intelligence</span> for comprehensive market insights
+                  🎯 <strong>Advanced hybrid AI analysis</strong> combining <span className="text-blue-600 dark:text-blue-400 font-semibold">Qwen&apos;s technical expertise</span> 
+                  with <span className="text-green-600 dark:text-green-400 font-semibold">Gemini&apos;s visual intelligence</span> for comprehensive market insights
                 </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -368,7 +383,7 @@ export default function EnhancedAIAnalysis() {
                 key={tab.key}
                 variant={currentTab === tab.key ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setCurrentTab(tab.key as any)}
+                onClick={() => setCurrentTab(tab.key as 'analysis' | 'history' | 'performance')}
                 className={cn(
                   "flex flex-col items-center gap-1 h-auto py-3 px-4 rounded-lg transition-all duration-200",
                   currentTab === tab.key 
@@ -584,8 +599,7 @@ export default function EnhancedAIAnalysis() {
                               </span>
                             </div>
                             <p className="text-xs text-primary/80 mt-1">
-                              {TIMEFRAMES.find(tf => tf.value === watch('timeframe'))?.description || 
-                               'Analysis will use this timeframe for data collection and pattern recognition'}
+                              Analysis will use this timeframe for data collection and pattern recognition
                             </p>
                           </div>
                         )}
@@ -615,7 +629,7 @@ export default function EnhancedAIAnalysis() {
                               ? "border-primary bg-primary/5 shadow-md"
                               : "border-border hover:border-primary/50 bg-card hover:shadow-sm"
                           )}
-                          onClick={() => setValue('model_preference', model.value as any)}
+                          onClick={() => setValue('model_preference', model.value as 'hybrid' | 'qwen' | 'gemini')}
                         >
                           {/* Selection indicator */}
                           {watch('model_preference') === model.value && (
@@ -694,7 +708,7 @@ export default function EnhancedAIAnalysis() {
                                   ? "border-primary bg-primary/5"
                                   : "border-border hover:border-primary/50 bg-card"
                               )}
-                              onClick={() => setValue('analysis_type', type.value as any)}
+                              onClick={() => setValue('analysis_type', type.value as 'quick' | 'detailed' | 'comprehensive')}
                             >
                               <div className="text-center space-y-2">
                                 <div className="w-8 h-8 mx-auto bg-muted rounded-lg flex items-center justify-center">
@@ -1074,19 +1088,33 @@ export default function EnhancedAIAnalysis() {
                             <CardContent className="space-y-3">
                               <div className="flex justify-between items-center p-2 bg-muted/30 rounded">
                                 <span className="text-sm text-muted-foreground font-medium">Technical Score</span>
-                                <span className="font-semibold text-foreground">{analysisResult.qwen_analysis.technical_score}/100</span>
+                                <span className="font-semibold text-foreground">
+                                  {typeof analysisResult.qwen_analysis?.technical_score === 'number' 
+                                    ? `${analysisResult.qwen_analysis.technical_score}/100`
+                                    : typeof analysisResult.qwen_analysis?.technical_score === 'string'
+                                    ? `${analysisResult.qwen_analysis.technical_score}/100`
+                                    : 'N/A'}
+                                </span>
                               </div>
                               <div className="flex justify-between items-center p-2 bg-muted/30 rounded">
                                 <span className="text-sm text-muted-foreground font-medium">Trend Strength</span>
-                                <span className="font-semibold text-foreground">{analysisResult.qwen_analysis.trend_strength}%</span>
+                                <span className="font-semibold text-foreground">
+                                  {typeof analysisResult.qwen_analysis?.trend_strength === 'number'
+                                    ? `${analysisResult.qwen_analysis.trend_strength}%`
+                                    : typeof analysisResult.qwen_analysis?.trend_strength === 'string'
+                                    ? `${analysisResult.qwen_analysis.trend_strength}%`
+                                    : 'N/A'}
+                                </span>
                               </div>
                               <div className="flex justify-between items-center p-2 bg-muted/30 rounded">
                                 <span className="text-sm text-muted-foreground font-medium">Momentum</span>
                                 <Badge variant={
-                                  analysisResult.qwen_analysis.momentum_indicator === 'bullish' ? 'default' :
-                                  analysisResult.qwen_analysis.momentum_indicator === 'bearish' ? 'destructive' : 'secondary'
+                                  analysisResult.qwen_analysis?.momentum_indicator === 'bullish' ? 'default' :
+                                  analysisResult.qwen_analysis?.momentum_indicator === 'bearish' ? 'destructive' : 'secondary'
                                 }>
-                                  {analysisResult.qwen_analysis.momentum_indicator}
+                                  {typeof analysisResult.qwen_analysis?.momentum_indicator === 'string'
+                                    ? analysisResult.qwen_analysis.momentum_indicator
+                                    : 'unknown'}
                                 </Badge>
                               </div>
                             </CardContent>
@@ -1104,24 +1132,40 @@ export default function EnhancedAIAnalysis() {
                             <CardContent className="space-y-3">
                               <div className="flex justify-between items-center p-2 bg-muted/30 rounded">
                                 <span className="text-sm text-muted-foreground font-medium">Pattern Detected</span>
-                                <span className="font-semibold text-foreground capitalize">{analysisResult.gemini_analysis.pattern_recognition}</span>
+                                <span className="font-semibold text-foreground capitalize">
+                                  {typeof analysisResult.gemini_analysis?.pattern_recognition === 'string'
+                                    ? analysisResult.gemini_analysis.pattern_recognition
+                                    : 'N/A'}
+                                </span>
                               </div>
                               <div className="flex justify-between items-center p-2 bg-muted/30 rounded">
                                 <span className="text-sm text-muted-foreground font-medium">Visual Sentiment</span>
                                 <Badge variant={
-                                  analysisResult.gemini_analysis.visual_sentiment === 'positive' ? 'default' :
-                                  analysisResult.gemini_analysis.visual_sentiment === 'negative' ? 'destructive' : 'secondary'
+                                  analysisResult.gemini_analysis?.visual_sentiment === 'positive' ? 'default' :
+                                  analysisResult.gemini_analysis?.visual_sentiment === 'negative' ? 'destructive' : 'secondary'
                                 }>
-                                  {analysisResult.gemini_analysis.visual_sentiment}
+                                  {typeof analysisResult.gemini_analysis?.visual_sentiment === 'string'
+                                    ? analysisResult.gemini_analysis.visual_sentiment
+                                    : 'unknown'}
                                 </Badge>
                               </div>
                               <div className="flex justify-between items-center p-2 bg-muted/30 rounded">
                                 <span className="text-sm text-muted-foreground font-medium">Chart Confidence</span>
-                                <span className="font-semibold text-foreground">{analysisResult.gemini_analysis.chart_confidence}%</span>
+                                <span className="font-semibold text-foreground">
+                                  {typeof analysisResult.gemini_analysis?.chart_confidence === 'number'
+                                    ? `${analysisResult.gemini_analysis.chart_confidence}%`
+                                    : typeof analysisResult.gemini_analysis?.chart_confidence === 'string'
+                                    ? `${analysisResult.gemini_analysis.chart_confidence}%`
+                                    : 'N/A'}
+                                </span>
                               </div>
                               <div className="flex justify-between items-center p-2 bg-muted/30 rounded">
                                 <span className="text-sm text-muted-foreground font-medium">Key Levels Found</span>
-                                <span className="font-semibold text-foreground">{analysisResult.gemini_analysis.key_levels_identified}</span>
+                                <span className="font-semibold text-foreground">
+                                  {typeof analysisResult.gemini_analysis?.key_levels_identified === 'string' || typeof analysisResult.gemini_analysis?.key_levels_identified === 'number'
+                                    ? String(analysisResult.gemini_analysis.key_levels_identified)
+                                    : 'N/A'}
+                                </span>
                               </div>
                             </CardContent>
                           </Card>

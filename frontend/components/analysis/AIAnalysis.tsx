@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   CpuChipIcon,
@@ -10,27 +10,13 @@ import {
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
   MinusIcon,
-  ClockIcon,
   BoltIcon,
   SparklesIcon,
-  TrophyIcon,
-  FireIcon,
-  StarIcon,
-  ArrowPathIcon,
-  ChartPieIcon,
   AcademicCapIcon,
-  BeakerIcon,
 } from '@heroicons/react/24/outline';
 import { tradingApi, AnalysisRequest, AnalysisResponse, handleApiError, PriceData } from '@/lib/api';
-import { 
-  cn, 
-  formatPercentage, 
-  getActionColor,
-  getRiskColor,
-  getConfidenceColor,
-  isValidSymbol,
-} from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle, Button, TradingActionBadge, Badge } from '@/components/ui';
+import { cn, isValidSymbol, formatPercentage } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle, Button } from '@/components/ui';
 
 interface AnalysisFormData {
   symbol: string;
@@ -99,14 +85,6 @@ export default function AIAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [realtimePrice, setRealtimePrice] = useState<PriceData | null>(null);
-  const [analysisHistory, setAnalysisHistory] = useState<AnalysisHistory[]>([]);
-  const [modelPerformance, setModelPerformance] = useState<ModelPerformance[]>([
-    { model: 'Qwen', accuracy: 78.5, avg_confidence: 82.3, success_rate: 74.2, avg_execution_time: 1240 },
-    { model: 'Gemini', accuracy: 81.2, avg_confidence: 79.8, success_rate: 77.9, avg_execution_time: 1890 },
-    { model: 'Hybrid', accuracy: 84.7, avg_confidence: 85.1, success_rate: 82.3, avg_execution_time: 1650 },
-  ]);
-  const [currentTab, setCurrentTab] = useState<'analysis' | 'history' | 'performance'>('analysis');
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<AnalysisFormData>({
     defaultValues: {
