@@ -7,10 +7,12 @@ import {
   UserIcon,
   ClipboardDocumentIcon,
   ChartBarIcon,
-  LightBulbIcon 
+  LightBulbIcon,
+  PhotoIcon
 } from '@heroicons/react/24/outline';
 import { cn, formatTimestamp } from '@/lib/utils';
 import { tradingApi, handleApiError } from '@/lib/api';
+import ImageUpload from './ImageUpload';
 
 // Helper component for formatting AI messages
 const MessageContent = ({ content }: { content: string }) => {
@@ -118,13 +120,15 @@ const MessageContent = ({ content }: { content: string }) => {
 
 interface ChatMessage {
   id: string;
-  type: 'user' | 'ai';
+  type: 'user' | 'ai' | 'image';
   message: string;
   timestamp: string;
   intent?: any;
   suggestions?: string[];
   actions?: any[];
   isLoading?: boolean;
+  imageFilename?: string;
+  imageAnalysis?: any;
 }
 
 interface AITradingChatProps {
@@ -136,6 +140,8 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -233,6 +239,69 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
     inputRef.current?.focus();
   };
 
+  const handleImageUpload = async (file: File, additionalContext?: string) => {
+    setIsImageUploading(true);
+    setShowImageUpload(false);
+
+    // Add user message for image upload
+    const userMessage: ChatMessage = {
+      id: `user_${Date.now()}`,
+      type: 'image',
+      message: `Uploaded chart image: ${file.name}`,
+      timestamp: new Date().toISOString(),
+      imageFilename: file.name
+    };
+
+    const loadingMessage: ChatMessage = {
+      id: `ai_${Date.now()}`,
+      type: 'ai',
+      message: '🔍 Analyzing your chart image with AI... This may take a moment.',
+      timestamp: new Date().toISOString(),
+      isLoading: true,
+    };
+
+    setMessages(prev => [...prev, userMessage, loadingMessage]);
+
+    try {
+      const response = await tradingApi.uploadAndAnalyzeImage({
+        file,
+        session_id: sessionId,
+        additional_context: additionalContext
+      });
+
+      // Remove loading message and add AI response
+      setMessages(prev => {
+        const filtered = prev.filter(msg => !msg.isLoading);
+        const aiMessage: ChatMessage = {
+          id: `ai_${Date.now()}`,
+          type: 'ai',
+          message: response.response,
+          timestamp: new Date().toISOString(),
+          suggestions: response.suggestions,
+          imageAnalysis: response.analysis
+        };
+        return [...filtered, aiMessage];
+      });
+
+    } catch (err) {
+      const apiError = handleApiError(err);
+      
+      // Remove loading message and add error message
+      setMessages(prev => {
+        const filtered = prev.filter(msg => !msg.isLoading);
+        const errorMessage: ChatMessage = {
+          id: `ai_${Date.now()}`,
+          type: 'ai',
+          message: `😔 **Image Analysis Failed**\n\nI encountered an error while analyzing your chart:\n\n*${apiError.message}*\n\nPlease try uploading the image again or ensure it's a clear trading chart image.`,
+          timestamp: new Date().toISOString(),
+        };
+        return [...filtered, errorMessage];
+      });
+    } finally {
+      setIsImageUploading(false);
+    }
+  };
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -283,14 +352,14 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
                 <h4 className="text-sm font-medium text-foreground mb-2">🚀 Quick Start:</h4>
                 <div className="grid grid-cols-1 gap-2">
                   {[
-                    { text: "Analyze BTC-USD", icon: "📈" },
-                    { text: "What is RSI?", icon: "📊" },
-                    { text: "Explain support and resistance", icon: "📚" },
-                    { text: "Show popular symbols", icon: "⭐" }
+                    { text: "Upload Chart for Analysis", icon: "📈", action: () => setShowImageUpload(!showImageUpload) },
+                    { text: "Analyze BTC-USD", icon: "🔍", action: () => handleSuggestionClick("Analyze BTC-USD") },
+                    { text: "What is RSI?", icon: "📊", action: () => handleSuggestionClick("What is RSI?") },
+                    { text: "Explain support and resistance", icon: "📚", action: () => handleSuggestionClick("Explain support and resistance") }
                   ].map((suggestion) => (
                     <button
                       key={suggestion.text}
-                      onClick={() => handleSuggestionClick(suggestion.text)}
+                      onClick={suggestion.action}
                       className="flex items-center gap-2 px-3 py-2 text-sm text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors border border-primary/20 text-left"
                     >
                       <span>{suggestion.icon}</span>
@@ -357,15 +426,29 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
               )}
             </div>
 
-            {message.type === 'user' && (
+            {(message.type === 'user' || message.type === 'image') && (
               <div className="flex-shrink-0">
                 <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center border border-border">
-                  <UserIcon className="h-4 w-4 text-muted-foreground" />
+                  {message.type === 'image' ? (
+                    <PhotoIcon className="h-4 w-4 text-primary" />
+                  ) : (
+                    <UserIcon className="h-4 w-4 text-muted-foreground" />
+                  )}
                 </div>
               </div>
             )}
           </div>
         ))}
+
+        {/* Image Upload Interface */}
+        {showImageUpload && (
+          <div className="mb-4">
+            <ImageUpload
+              onImageUpload={handleImageUpload}
+              isUploading={isImageUploading}
+            />
+          </div>
+        )}
 
         {/* Suggestions */}
         {messages.length > 0 && messages[messages.length - 1]?.suggestions && (
@@ -394,6 +477,21 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
       {/* Input */}
       <div className="p-4 border-t border-border bg-muted/30">
         <div className="flex gap-3">
+          <button
+            onClick={() => setShowImageUpload(!showImageUpload)}
+            disabled={isLoading || isImageUploading}
+            className={cn(
+              "px-3 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center",
+              showImageUpload
+                ? "bg-primary text-primary-foreground shadow-md"
+                : isLoading || isImageUploading
+                  ? "bg-muted text-muted-foreground cursor-not-allowed"
+                  : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground border border-input shadow-sm"
+            )}
+            title="Upload chart image for analysis"
+          >
+            <PhotoIcon className="h-5 w-5" />
+          </button>
           <div className="flex-1 relative">
             <input
               ref={inputRef}
@@ -401,7 +499,7 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask me anything about trading... 💬"
+              placeholder={showImageUpload ? "Or ask me anything about trading..." : "Ask me anything about trading... 💬"}
               disabled={isLoading}
               className="w-full px-4 py-3 bg-background border border-input rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring disabled:opacity-50 disabled:cursor-not-allowed text-foreground placeholder:text-muted-foreground"
             />
@@ -434,14 +532,14 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
         <div className="flex items-center justify-between mt-3 pt-2 border-t border-border">
           <div className="flex gap-2">
             {[
-              { text: "Analyze BTC", query: "Analyze BTC-USD" },
-              { text: "Market Overview", query: "What's the current market overview?" },
-              { text: "Learn RSI", query: "What is RSI indicator?" }
+              { text: "Upload Chart", action: () => setShowImageUpload(!showImageUpload) },
+              { text: "Analyze BTC", action: () => handleSuggestionClick("Analyze BTC-USD") },
+              { text: "Learn RSI", action: () => handleSuggestionClick("What is RSI indicator?") }
             ].map((quick) => (
               <button
                 key={quick.text}
-                onClick={() => handleSuggestionClick(quick.query)}
-                disabled={isLoading}
+                onClick={quick.action}
+                disabled={isLoading || isImageUploading}
                 className="px-2 py-1 text-xs text-primary bg-primary/10 rounded hover:bg-primary/20 transition-colors disabled:opacity-50"
               >
                 {quick.text}
