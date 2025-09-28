@@ -70,7 +70,8 @@ class TradingChatAI:
         self, 
         message: str, 
         user_id: Optional[str] = None,
-        session_id: Optional[str] = "default"
+        session_id: Optional[str] = "default",
+        image_analysis_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """Process a chat message and return AI response."""
         
@@ -84,8 +85,10 @@ class TradingChatAI:
             # Get conversation context
             context = self._get_conversation_context(session_id)
             
-            # Generate response based on intent
-            if intent["type"] == "analysis_request":
+            # Check if message is related to image analysis
+            if image_analysis_id:
+                response = await self._handle_image_analysis_query(message, image_analysis_id, context)
+            elif intent["type"] == "analysis_request":
                 response = await self._handle_analysis_request(message, intent, context)
             elif intent["type"] == "market_query":
                 response = await self._handle_market_query(message, intent, context)
@@ -439,6 +442,96 @@ Always remind users that trading involves risks and to never invest more than th
         # Keep only last 20 messages per session
         if len(self.conversation_history[session_id]) > 20:
             self.conversation_history[session_id] = self.conversation_history[session_id][-20:]
+    
+    async def _handle_image_analysis_query(
+        self,
+        message: str,
+        image_analysis_id: int,
+        context: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Handle queries related to uploaded image analysis."""
+        
+        try:
+            # Get image analysis from database
+            from app.core.database import get_async_db
+            from app.models.models import ImageAnalysis
+            
+            async with get_async_db() as db:
+                result = await db.execute(
+                    db.query(ImageAnalysis).filter(ImageAnalysis.id == image_analysis_id)
+                )
+                analysis = result.first()
+                
+                if not analysis:
+                    return {
+                        "text": "I couldn't find the image analysis you're referring to. Could you please upload the image again?",
+                        "suggestions": ["Upload new image", "Ask general trading question"]
+                    }
+                
+                # Create context for follow-up questions
+                analysis_context = f"""
+User is asking about a previously analyzed chart:
+- Symbol: {analysis.symbol_detected or 'Unknown'}
+- Trading Signal: {analysis.trading_signal.value if analysis.trading_signal else 'None'}
+- Confidence: {analysis.confidence_score or 0:.2f}
+- Analysis Summary: {analysis.analysis_summary or 'No summary'}
+- Key Insights: {analysis.key_insights or []}
+- Technical Indicators: {analysis.technical_indicators or {}}
+- Support Levels: {analysis.support_levels or []}
+- Resistance Levels: {analysis.resistance_levels or []}
+- Risk Level: {analysis.risk_level or 'Unknown'}
+
+User's follow-up question: {message}
+"""
+                
+                if self.gemini_model:
+                    prompt = f"""
+You are a trading expert helping a user understand their chart analysis.
+
+{analysis_context}
+
+Provide a helpful, detailed response that:
+1. Directly answers their question
+2. References specific details from the analysis
+3. Provides actionable trading insights
+4. Maintains educational focus
+5. Includes appropriate risk warnings
+
+Be conversational and helpful while staying focused on the analysis data.
+"""
+                    
+                    response = self.gemini_model.generate_content(prompt)
+                    
+                    return {
+                        "text": response.text + "\n\n⚠️ *Remember: This analysis is for educational purposes. Always do your own research.*",
+                        "suggestions": [
+                            "Explain the technical indicators",
+                            "What are the key risk factors?",
+                            "How should I interpret the signals?",
+                            "Upload another chart for analysis"
+                        ]
+                    }
+                else:
+                    # Fallback response
+                    symbol = analysis.symbol_detected or "this symbol"
+                    signal = analysis.trading_signal.value if analysis.trading_signal else "HOLD"
+                    
+                    return {
+                        "text": f"Based on your uploaded chart analysis for {symbol}, I recommended a {signal} signal. \n\nThe analysis showed key insights like {', '.join(analysis.key_insights[:2]) if analysis.key_insights else 'price action and trend analysis'}. \n\nWhat specific aspect would you like me to explain further?",
+                        "suggestions": [
+                            "Explain the trading signal",
+                            "What are the risks?",
+                            "Show support/resistance levels",
+                            "Upload new chart"
+                        ]
+                    }
+                    
+        except Exception as e:
+            logger.error(f"Image analysis query failed: {e}")
+            return {
+                "text": "I had trouble accessing your previous analysis. Could you clarify what you'd like to know, or upload the image again?",
+                "suggestions": ["Upload chart image", "Ask general question"]
+            }
     
     def get_conversation_stats(self) -> Dict[str, Any]:
         """Get conversation statistics."""

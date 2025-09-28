@@ -16,8 +16,8 @@ if env_path.exists():
     print(f"✅ Loaded environment from {env_path}")
 else:
     print(f"⚠️  No .env file found at {env_path}")
-from typing import Dict, Any, List, Optional
-from fastapi import FastAPI, HTTPException, Query
+from typing import Dict, Any, List, Optional, Tuple
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import google.generativeai as genai
@@ -25,6 +25,12 @@ import aiohttp
 import asyncio
 import yfinance as yf
 import pandas as pd
+import uuid
+import json
+from io import BytesIO
+from pathlib import Path
+from PIL import Image
+import aiofiles
 
 # Environment setup
 os.environ["GEMINI_API_KEY"] = "AIzaSyBipHWt4HXD9M121H1yEt-HhglDM9rove4"
@@ -798,6 +804,318 @@ Be concise, clear, and helpful. Format your response to be easy to read and scan
             success=False,
             response="I'm sorry, I'm having trouble processing your request right now. Please try again.",
             timestamp=datetime.utcnow().isoformat()
+        )
+
+# Image Analysis Functionality
+class ImageAnalysisService:
+    def __init__(self):
+        self.upload_dir = Path("uploads/images")
+        self.supported_formats = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
+        self.max_file_size = 10 * 1024 * 1024  # 10MB
+        
+        # Ensure upload directory exists
+        self.upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    async def validate_image(self, file: UploadFile) -> Dict[str, Any]:
+        """Validate uploaded image file."""
+        
+        # Check file extension
+        file_ext = Path(file.filename).suffix.lower()
+        if file_ext not in self.supported_formats:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Unsupported file format. Supported: {', '.join(self.supported_formats)}"
+            )
+        
+        # Read file content to check size and validity
+        content = await file.read()
+        await file.seek(0)  # Reset file pointer
+        
+        # Check file size
+        if len(content) > self.max_file_size:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File too large. Maximum size: {self.max_file_size // (1024*1024)}MB"
+            )
+        
+        # Validate image format by trying to open it
+        try:
+            image = Image.open(BytesIO(content))
+            image.verify()  # Verify it's a valid image
+            
+            # Get image dimensions
+            image = Image.open(BytesIO(content))  # Reload after verify
+            width, height = image.size
+            
+            return {
+                "valid": True,
+                "size": len(content),
+                "dimensions": {"width": width, "height": height},
+                "format": image.format,
+                "mode": image.mode
+            }
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid image file: {str(e)}"
+            )
+    
+    async def save_image(self, file: UploadFile) -> Tuple[str, str]:
+        """Save uploaded image and return filename and path."""
+        
+        # Generate unique filename
+        file_ext = Path(file.filename).suffix.lower()
+        unique_filename = f"{uuid.uuid4().hex}{file_ext}"
+        file_path = self.upload_dir / unique_filename
+        
+        try:
+            # Save file
+            content = await file.read()
+            async with aiofiles.open(file_path, "wb") as f:
+                await f.write(content)
+            
+            print(f"Image saved: {unique_filename} ({len(content)} bytes)")
+            return unique_filename, str(file_path)
+            
+        except Exception as e:
+            print(f"Failed to save image: {e}")
+            # Clean up if file was partially created
+            if file_path.exists():
+                file_path.unlink()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to save image: {str(e)}"
+            )
+    
+    def create_chart_analysis_prompt(self, additional_context: str = "") -> str:
+        """Create comprehensive prompt for chart analysis."""
+        
+        prompt = f"""You are an expert trading chart analyst. Analyze this trading chart image and provide detailed insights.
+
+ANALYSIS REQUIREMENTS:
+1. Identify the trading symbol and timeframe if visible
+2. Analyze price action, trends, and patterns
+3. Identify technical indicators present (RSI, MACD, moving averages, etc.)
+4. Determine support and resistance levels
+5. Assess current market momentum and sentiment
+6. Provide trading signal recommendation
+7. Evaluate risk factors and potential price targets
+
+ADDITIONAL CONTEXT: {additional_context}
+
+FORMAT YOUR RESPONSE AS JSON:
+{{
+    "symbol_detected": "BTC/USD or null if not visible",
+    "timeframe_detected": "4h or null if not visible", 
+    "trading_signal": "STRONG_BUY|BUY|HOLD|SELL|STRONG_SELL",
+    "confidence_score": 0.85,
+    "analysis_summary": "Brief 2-3 sentence summary of your analysis",
+    "detailed_analysis": "Comprehensive analysis of the chart with specific observations",
+    "key_insights": [
+        "Most important insight 1",
+        "Most important insight 2", 
+        "Most important insight 3"
+    ],
+    "technical_indicators": {{
+        "rsi": "Overbought/Oversold/Neutral or null",
+        "macd": "Bullish/Bearish/Neutral or null",
+        "moving_averages": "Above/Below/Mixed or null",
+        "volume": "High/Low/Normal or null",
+        "other_indicators": ["Any other indicators you can identify"]
+    }},
+    "support_levels": [45000, 42000],
+    "resistance_levels": [48000, 50000],
+    "risk_level": "low|medium|high",
+    "risk_factors": [
+        "Specific risk factor 1",
+        "Specific risk factor 2"
+    ],
+    "price_target": 52000.0,
+    "stop_loss": 44000.0
+}}
+
+Be specific, objective, and data-driven in your analysis. Focus on actionable insights for traders."""
+        
+        return prompt
+    
+    async def analyze_chart_image(
+        self, 
+        image_path: str, 
+        additional_context: str = ""
+    ) -> Dict[str, Any]:
+        """Analyze trading chart image using Gemini Vision."""
+        
+        start_time = time.time()
+        
+        try:
+            # Load image for Gemini
+            image = Image.open(image_path)
+            
+            # Create analysis prompt
+            prompt = self.create_chart_analysis_prompt(additional_context)
+            
+            print(f"Starting chart analysis for image: {Path(image_path).name}")
+            
+            # Generate analysis using Gemini Vision
+            response = model.generate_content([prompt, image])
+            
+            if not response or not response.text:
+                raise Exception("No response from Gemini Vision API")
+            
+            # Parse JSON response
+            try:
+                # Clean response if it contains markdown
+                clean_response = response.text
+                if '```json' in response.text:
+                    clean_response = response.text.split('```json')[1].split('```')[0].strip()
+                elif '```' in response.text:
+                    clean_response = response.text.split('```')[1].split('```')[0].strip()
+                
+                analysis_data = json.loads(clean_response)
+                
+                processing_time = int((time.time() - start_time) * 1000)
+                
+                # Add metadata
+                analysis_data.update({
+                    "processing_time_ms": processing_time,
+                    "model_used": "gemini-2.0-flash-exp",
+                    "api_version": "v1",
+                    "success": True
+                })
+                
+                print(f"Chart analysis completed in {processing_time}ms")
+                return analysis_data
+                
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse analysis response: {e}")
+                # Return basic analysis with raw response
+                return {
+                    "success": False,
+                    "error": "Failed to parse AI response",
+                    "raw_response": response.text[:1000],
+                    "analysis_summary": "AI analysis completed but response format was invalid",
+                    "detailed_analysis": response.text,
+                    "trading_signal": "HOLD",
+                    "confidence_score": 0.3,
+                    "processing_time_ms": int((time.time() - start_time) * 1000)
+                }
+        
+        except Exception as e:
+            print(f"Image analysis failed: {e}")
+            processing_time = int((time.time() - start_time) * 1000)
+            return {
+                "success": False,
+                "error": str(e),
+                "analysis_summary": f"Analysis failed: {str(e)}",
+                "detailed_analysis": "Unable to analyze chart due to technical error",
+                "trading_signal": "HOLD",
+                "confidence_score": 0.0,
+                "processing_time_ms": processing_time
+            }
+
+# Initialize image analysis service
+image_service = ImageAnalysisService()
+
+@app.post("/api/v1/chat/upload-image")
+async def upload_and_analyze_image(
+    file: UploadFile = File(...),
+    session_id: str = Form("default"),
+    additional_context: str = Form("")
+):
+    """
+    Upload and analyze trading chart image.
+    
+    Accepts image files and performs AI-powered chart analysis.
+    """
+    
+    try:
+        print(f"Received image upload: {file.filename}")
+        
+        # Validate image
+        validation = await image_service.validate_image(file)
+        print(f"Image validation passed: {validation}")
+        
+        # Save image
+        filename, file_path = await image_service.save_image(file)
+        print(f"Image saved as: {filename}")
+        
+        # Analyze chart
+        analysis_result = await image_service.analyze_chart_image(
+            file_path, additional_context
+        )
+        
+        # Format AI response message
+        signal = analysis_result.get("trading_signal", "HOLD")
+        confidence = analysis_result.get("confidence_score", 0) * 100
+        symbol = analysis_result.get("symbol_detected") or "Unknown Symbol"
+        
+        ai_response = f"""📊 **Chart Analysis Complete**
+
+**Symbol:** {symbol}
+**Signal:** {signal}
+**Confidence:** {confidence:.0f}%
+
+**Analysis Summary:**
+{analysis_result.get('analysis_summary', 'Analysis completed successfully')}
+
+**Key Insights:**
+{chr(10).join(['• ' + insight for insight in analysis_result.get('key_insights', [])])}
+
+**Technical Indicators:**
+{chr(10).join([f'• **{k.title()}:** {v}' for k, v in (analysis_result.get('technical_indicators', {}) or {}).items() if v])}
+
+**Risk Level:** {analysis_result.get('risk_level', 'medium').upper()}
+
+⚠️ **Risk Warning**: This analysis is for educational purposes. Always conduct your own research and never invest more than you can afford to lose."""
+        
+        print(f"Analysis completed successfully for {filename}")
+        
+        return {
+            "success": True,
+            "message": "Image analysis completed",
+            "analysis": analysis_result,
+            "response": ai_response,
+            "image_filename": filename,
+            "suggestions": [
+                "Tell me more about this analysis",
+                "What are the key risks?",
+                "Explain the technical indicators",
+                "What should I watch for next?"
+            ],
+            "timestamp": time.time()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Image analysis failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Image analysis failed: {str(e)}"
+        )
+
+@app.get("/api/v1/chat/history/{session_id}")
+async def get_chat_history(session_id: str, limit: int = Query(50, le=100)):
+    """
+    Get chat history for a session including image analyses.
+    """
+    
+    try:
+        # For now, return empty history since we're not persisting to database yet
+        return {
+            "success": True,
+            "session_id": session_id,
+            "messages": [],
+            "total_count": 0
+        }
+    
+    except Exception as e:
+        print(f"Failed to get chat history: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve chat history"
         )
 
 if __name__ == "__main__":

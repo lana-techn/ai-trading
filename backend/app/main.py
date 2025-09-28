@@ -9,7 +9,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from typing import Dict, Any, List, Optional
 
-from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks, WebSocket, WebSocketDisconnect, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware  
 from fastapi.responses import JSONResponse
@@ -488,6 +488,108 @@ async def chat_with_ai(request: Dict[str, str]):
         raise HTTPException(
             status_code=500,
             detail="Failed to process chat message"
+        )
+
+
+@app.post(f"{settings.API_V1_STR}/chat/upload-image")
+async def upload_and_analyze_image(
+    file: UploadFile = File(...),
+    session_id: str = Form("default"),
+    additional_context: str = Form("")
+):
+    """
+    Upload and analyze trading chart image.
+    
+    Accepts image files and performs AI-powered chart analysis.
+    """
+    
+    from app.services.image_analysis import image_analysis_service
+    from app.core.database import get_async_db
+    from app.models.models import ChatMessage, MessageType
+    
+    try:
+        # Validate image
+        validation = await image_analysis_service.validate_image(file)
+        logger.info(f"Image validation passed: {validation}")
+        
+        # Save image
+        filename, file_path = await image_analysis_service.save_image(file)
+        
+        # Analyze chart
+        analysis_result = await image_analysis_service.analyze_chart_image(
+            file_path, additional_context
+        )
+        
+        # Format AI response message
+        signal = analysis_result.get("trading_signal", "HOLD")
+        confidence = analysis_result.get("confidence_score", 0) * 100
+        symbol = analysis_result.get("symbol_detected") or "Unknown Symbol"
+        
+        ai_response = f"""📊 **Chart Analysis Complete**
+
+**Symbol:** {symbol}
+**Signal:** {signal}
+**Confidence:** {confidence:.0f}%
+
+**Analysis Summary:**
+{analysis_result.get('analysis_summary', 'Analysis completed successfully')}
+
+**Key Insights:**
+{chr(10).join(['• ' + insight for insight in analysis_result.get('key_insights', [])])}
+
+**Technical Indicators:**
+{chr(10).join([f'• **{k.title()}:** {v}' for k, v in (analysis_result.get('technical_indicators', {}) or {}).items() if v])}
+
+**Risk Level:** {analysis_result.get('risk_level', 'medium').upper()}
+
+⚠️ **Risk Warning**: This analysis is for educational purposes. Always conduct your own research and never invest more than you can afford to lose."""
+        
+        return {
+            "success": True,
+            "message": "Image analysis completed",
+            "analysis": analysis_result,
+            "response": ai_response,
+            "image_filename": filename,
+            "suggestions": [
+                "Tell me more about this analysis",
+                "What are the key risks?",
+                "Explain the technical indicators",
+                "What should I watch for next?"
+            ],
+            "timestamp": time.time()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Image analysis failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Image analysis failed: {str(e)}"
+        )
+
+
+@app.get(f"{settings.API_V1_STR}/chat/history/{{session_id}}")
+async def get_chat_history(session_id: str, limit: int = Query(50, le=100)):
+    """
+    Get chat history for a session including image analyses.
+    """
+    
+    try:
+        # For now, return empty history since we're not persisting to database yet
+        # This will be implemented once database is fully set up
+        return {
+            "success": True,
+            "session_id": session_id,
+            "messages": [],
+            "total_count": 0
+        }
+    
+    except Exception as e:
+        logger.error(f"Failed to get chat history: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve chat history"
         )
 
 
