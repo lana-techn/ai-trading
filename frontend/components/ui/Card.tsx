@@ -7,17 +7,13 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   hover?: boolean;
 }
 
-interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
-  // Card header specific props can be added here
-}
+type CardHeaderProps = React.HTMLAttributes<HTMLDivElement>;
 
 interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {
   padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
-interface CardFooterProps extends React.HTMLAttributes<HTMLDivElement> {
-  // Card footer specific props can be added here
-}
+type CardFooterProps = React.HTMLAttributes<HTMLDivElement>;
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', padding = 'md', hover = false, children, ...props }, ref) => {

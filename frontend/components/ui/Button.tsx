@@ -35,35 +35,30 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             'h-14 px-8 text-lg': size === 'xl',
           },
           
-          // Color variants
-          {
-            // Default
-            'bg-secondary text-secondary-foreground hover:bg-secondary-hover border border-border': variant === 'default',
-            
-            // Primary
-            'bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm hover:shadow-md': variant === 'primary',
-            
-            // Secondary
-            'bg-secondary text-secondary-foreground hover:bg-secondary-hover border border-border': variant === 'secondary',
-            
-            // Success
-            'bg-success text-success-foreground hover:bg-success/90 shadow-sm': variant === 'success',
-            
-            // Destructive
-            'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm': variant === 'destructive',
-            
-            // Warning
-            'bg-warning text-warning-foreground hover:bg-warning/90 shadow-sm': variant === 'warning',
-            
-            // Outline
-            'border-2 border-primary text-primary bg-transparent hover:bg-primary hover:text-primary-foreground': variant === 'outline',
-            
-            // Ghost
-            'text-foreground hover:bg-accent hover:text-accent-foreground': variant === 'ghost',
-            
-            // Link
-            'text-primary underline-offset-4 hover:underline': variant === 'link',
-          },
+          // Color variants (use single string to avoid duplicate keys)
+          (() => {
+            switch (variant) {
+              case 'primary':
+                return 'bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm hover:shadow-md';
+              case 'secondary':
+                return 'bg-secondary text-secondary-foreground hover:bg-secondary-hover border border-border';
+              case 'success':
+                return 'bg-success text-success-foreground hover:bg-success/90 shadow-sm';
+              case 'destructive':
+                return 'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm';
+              case 'warning':
+                return 'bg-warning text-warning-foreground hover:bg-warning/90 shadow-sm';
+              case 'outline':
+                return 'border-2 border-primary text-primary bg-transparent hover:bg-primary hover:text-primary-foreground';
+              case 'ghost':
+                return 'text-foreground hover:bg-accent hover:text-accent-foreground';
+              case 'link':
+                return 'text-primary underline-offset-4 hover:underline';
+              case 'default':
+              default:
+                return 'bg-secondary text-secondary-foreground hover:bg-secondary-hover border border-border';
+            }
+          })(),
           
           // Full width
           {

@@ -72,7 +72,6 @@ export function SmoothThemeToggle({
   ];
 
   const currentTheme = themes.find(t => t.value === theme) || themes[0];
-  const resolvedTheme = theme === 'system' ? systemTheme : theme;
 
   const handleThemeChange = (newTheme: string) => {
     if (isTransitioning) return;
