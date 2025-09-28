@@ -6,7 +6,6 @@ import {
   CpuChipIcon, 
   UserIcon,
   ClipboardDocumentIcon,
-  ChartBarIcon,
   LightBulbIcon,
   PhotoIcon
 } from '@heroicons/react/24/outline';
@@ -17,7 +16,7 @@ import ImageUpload from './ImageUpload';
 // Helper component for formatting AI messages
 const MessageContent = ({ content }: { content: string }) => {
   const formatLine = (line: string) => {
-    let formattedLine = line;
+  const formattedLine = line;
     
     // Handle markdown headers (###, ##, #)
     if (formattedLine.match(/^#{1,3}\s+/)) {
@@ -123,12 +122,12 @@ interface ChatMessage {
   type: 'user' | 'ai' | 'image';
   message: string;
   timestamp: string;
-  intent?: any;
+  intent?: Record<string, unknown>;
   suggestions?: string[];
-  actions?: any[];
+  actions?: Array<Record<string, unknown>>;
   isLoading?: boolean;
   imageFilename?: string;
-  imageAnalysis?: any;
+  imageAnalysis?: Record<string, unknown>;
 }
 
 interface AITradingChatProps {
@@ -344,7 +343,7 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
               👋 Welcome to AI Trading Chat!
             </h3>
             <p className="text-muted-foreground mb-6 leading-relaxed">
-              I'm your AI trading assistant powered by advanced AI. I can help you with analysis, market insights, and educational content.
+              I&apos;m your AI trading assistant powered by advanced AI. I can help you with analysis, market insights, and educational content.
             </p>
             
             <div className="space-y-4">
