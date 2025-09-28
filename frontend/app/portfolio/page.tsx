@@ -17,8 +17,6 @@ import {
   ClockIcon,
   GlobeAltIcon,
   ScaleIcon,
-  ShieldCheckIcon,
-  SparklesIcon
 } from '@heroicons/react/24/outline';
 import PortfolioDashboard from '@/components/portfolio/PortfolioDashboard';
 import PortfolioHoldings from '@/components/portfolio/PortfolioHoldings';
@@ -26,14 +24,36 @@ import PortfolioPerformance from '@/components/portfolio/PortfolioPerformance';
 import TransactionHistory from '@/components/portfolio/TransactionHistory';
 import PortfolioAnalytics from '@/components/portfolio/PortfolioAnalytics';
 
+interface Holding {
+  symbol: string;
+  name: string;
+  quantity: number;
+  avgPrice: number;
+  currentPrice: number;
+  value: number;
+  gainLoss: number;
+  gainLossPercent: number;
+}
+
+interface Transaction {
+  id: number;
+  type: 'buy' | 'sell';
+  symbol: string;
+  quantity: number;
+  price: number;
+  value: number;
+  date: string;
+  fees: number;
+}
+
 interface PortfolioData {
   totalValue: number;
   totalGainLoss: number;
   totalGainLossPercent: number;
   dayChange: number;
   dayChangePercent: number;
-  holdings: any[];
-  transactions: any[];
+  holdings: Holding[];
+  transactions: Transaction[];
 }
 
 export default function PortfolioPage() {
@@ -44,9 +64,7 @@ export default function PortfolioPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Theme management with mounted state
-  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const isDarkMode = mounted ? resolvedTheme === 'dark' : false;
 
   useEffect(() => {
     setMounted(true);

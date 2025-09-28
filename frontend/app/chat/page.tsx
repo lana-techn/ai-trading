@@ -1,5 +1,5 @@
 import AITradingChat from '@/components/chat/AIChat';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
+import { Card, CardContent } from '@/components/ui';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 
 export default function ChatPage() {
