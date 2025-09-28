@@ -4,17 +4,14 @@ import { useState, useEffect } from 'react';
 import { 
   BanknotesIcon,
   ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon,
   ClockIcon,
   ChartBarIcon,
   PlusIcon,
-  TrashIcon,
   ArrowUpIcon,
   ArrowDownIcon 
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge } from '@/components/ui';
-import { useTheme } from '@/components/providers/ThemeProvider';
 
 interface Trade {
   id: string;
@@ -406,7 +403,7 @@ export default function PaperTradingSimulator({ className }: PaperTradingSimulat
                 <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl opacity-0 hover:opacity-100 transition-opacity" />
               </div>
               <p className="text-muted-foreground font-medium mb-2">No trades yet</p>
-              <p className="text-sm text-muted-foreground/80">Click "New Trade" to start paper trading</p>
+              <p className="text-sm text-muted-foreground/80">Click &quot;New Trade&quot; to start paper trading</p>
             </div>
           ) : (
             <div className="overflow-x-auto">

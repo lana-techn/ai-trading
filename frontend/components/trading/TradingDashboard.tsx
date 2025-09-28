@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { 
   CpuChipIcon, 
-  ChartBarIcon, 
   SparklesIcon 
 } from '@heroicons/react/24/outline';
 
@@ -27,8 +26,11 @@ export default function TradingDashboard() {
         const newData = { ...prev };
         Object.keys(newData).forEach(key => {
           const fluctuation = (Math.random() - 0.5) * 0.015;
-          newData[key].price = Math.round((newData[key].price * (1 + fluctuation)) * 100) / 100;
-          newData[key].change = Math.round((newData[key].change + fluctuation * 100) * 100) / 100;
+          const marketItem = newData[key as keyof typeof newData];
+          if (marketItem) {
+            marketItem.price = Math.round((marketItem.price * (1 + fluctuation)) * 100) / 100;
+            marketItem.change = Math.round((marketItem.change + fluctuation * 100) * 100) / 100;
+          }
         });
         return newData;
       });
@@ -78,8 +80,8 @@ export default function TradingDashboard() {
           return (
             <div key={symbol} className="bg-zinc-800/70 p-4 rounded-xl border border-zinc-600 hover:bg-zinc-700/70 transition-all duration-300">
               <div className="flex items-center space-x-2 mb-3">
-                <div className={`w-8 h-8 ${colors[data.color]} rounded-full flex items-center justify-center text-white font-bold`}>
-                  {symbolIcons[symbol]}
+                <div className={`w-8 h-8 ${colors[data.color as keyof typeof colors]} rounded-full flex items-center justify-center text-white font-bold`}>
+                  {symbolIcons[symbol as keyof typeof symbolIcons]}
                 </div>
                 <span className="text-lg font-bold text-white">{symbol}</span>
               </div>
