@@ -4,13 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { createChart, IChartApi, ISeriesApi } from 'lightweight-charts';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { tradingApi, ChartData, CandlestickData, Quote } from '@/lib/api';
+import { tradingApi, ChartData, CandlestickData } from '@/lib/api';
 import {
   PlayIcon,
   PauseIcon,
   ArrowPathIcon,
   ChartBarIcon,
-  Cog6ToothIcon,
   EyeIcon,
   EyeSlashIcon,
   ArrowsPointingOutIcon,
@@ -50,7 +49,6 @@ export default function ProfessionalTradingChart({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   
   const [chartData, setChartData] = useState<CandleData[]>([]);
   const [state, setState] = useState<ChartState>({
@@ -64,7 +62,6 @@ export default function ProfessionalTradingChart({
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [showVolume, setShowVolume] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [quote, setQuote] = useState<Quote | null>(null);
   const dataStreamRef = useRef<(() => void) | null>(null);
 
   // Fetch real-time data from Alpha Vantage
@@ -129,8 +126,6 @@ export default function ProfessionalTradingChart({
       
       // Update quote if fetched
       if (quoteResponse && quoteResponse.success) {
-        setQuote(quoteResponse.data);
-        
         setState(prev => ({
           ...prev,
           isLoading: false,
@@ -297,7 +292,6 @@ export default function ProfessionalTradingChart({
       width: chartContainerRef.current.clientWidth || 800,
       height: height,
       layout: {
-        backgroundColor: '#ffffff',
         textColor: '#333333',
         fontSize: 12,
       },

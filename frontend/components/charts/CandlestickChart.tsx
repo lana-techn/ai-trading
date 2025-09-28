@@ -479,7 +479,6 @@ export default function CandlestickChart({
         {/* Floating AI Chatbot with Auto-Analysis */}
         <AIChatbot 
           symbol={symbol} 
-          chartData={data}
           autoAnalyze={true}
         />
 

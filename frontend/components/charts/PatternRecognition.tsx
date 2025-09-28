@@ -23,8 +23,17 @@ interface CandlestickPattern {
   };
 }
 
+interface ChartDataPoint {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
 interface PatternRecognitionProps {
-  chartData?: any[];
+  chartData?: ChartDataPoint[];
   symbol: string;
   className?: string;
 }
@@ -60,7 +69,7 @@ export default function PatternRecognition({
   };
 
   // Mock pattern detection for demo
-  const simulatePatternDetection = async (data: any[]): Promise<CandlestickPattern[]> => {
+  const simulatePatternDetection = async (data: ChartDataPoint[]): Promise<CandlestickPattern[]> => {
     return new Promise((resolve) => {
       setTimeout(() => {
         const mockPatterns: CandlestickPattern[] = [
