@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ChartBarIcon } from '@heroicons/react/24/outline';
-import CandlestickChart from '@/components/charts/CandlestickChart';
+import { CandlestickChartWithAI } from '@/components/charts/CandlestickChart';
 import { cn } from '@/lib/utils';
 
 export default function ChartsPage() {
@@ -106,9 +106,9 @@ export default function ChartsPage() {
             </div>
           </div>
           
-          {/* Large Professional Trading Chart */}
+          {/* Large Professional Trading Chart with AI */}
           <div className="w-full">
-            <CandlestickChart
+            <CandlestickChartWithAI
               symbol={selectedSymbol}
               timeframe={selectedTimeframe}
               height={600}
