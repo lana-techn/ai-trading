@@ -14,7 +14,8 @@ import {
   Volume2
 } from 'lucide-react';
 import { generateCandlestickData, MarketData } from '@/lib/mock-data';
-import AIChatbot from '@/components/ai/AIChatbot';
+import { EnhancedDraggableAIChat } from '@/components/ai/EnhancedDraggableAIChat';
+import { useRealtimeData, useLivePrice } from '@/lib/hooks/use-realtime-data';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -31,27 +32,23 @@ export default function CandlestickChart({
   height = 500,
   className = ''
 }: CandlestickChartProps) {
-  const [data, setData] = useState<MarketData[]>([]);
-  const [loading, setLoading] = useState(true);
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  
+  // Use real-time data hook
+  const { data, isLoading, lastUpdate, error, refreshData } = useRealtimeData({
+    symbol,
+    timeframe,
+    updateInterval: 30000, // Update every 30 seconds
+    days: 60 // Increased for sufficient technical analysis data
+  });
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const isDark = mounted && resolvedTheme === 'dark';
-
-  // Load data
-  useEffect(() => {
-    if (mounted) {
-      setLoading(true);
-      // Use clean mock data
-      const mockData = generateCandlestickData(symbol, 30, timeframe);
-      setData(mockData);
-      setLoading(false);
-    }
-  }, [symbol, timeframe, mounted]);
+  const loading = isLoading;
 
   // Prepare candlestick series
   const candlestickSeries = useMemo(() => {
@@ -374,11 +371,10 @@ export default function CandlestickChart({
     }
   }), [isDark, height, data]);
 
-  // Calculate stats
-  const currentPrice = data.length > 0 ? data[data.length - 1].close : 0;
+  // Calculate stats with live price updates
+  const basePrice = data.length > 0 ? data[data.length - 1].close : 0;
+  const { currentPrice, priceChange, priceChangePercent, isIncreasing } = useLivePrice(symbol, basePrice);
   const previousPrice = data.length > 1 ? data[data.length - 2].close : currentPrice;
-  const priceChange = currentPrice - previousPrice;
-  const priceChangePercent = previousPrice > 0 ? (priceChange / previousPrice) * 100 : 0;
 
   if (!mounted) {
     return (
@@ -454,8 +450,23 @@ export default function CandlestickChart({
           </div>
           
           <div className="text-right text-sm text-gray-500">
-            <div>Demo Data</div>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${isIncreasing ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span>Live Data</span>
+            </div>
             <div>{data.length} periods</div>
+            {lastUpdate && (
+              <div className="text-xs">
+                Updated: {lastUpdate.toLocaleTimeString('id-ID', { 
+                  hour: '2-digit', 
+                  minute: '2-digit',
+                  second: '2-digit'
+                })}
+              </div>
+            )}
+            {error && (
+              <div className="text-xs text-red-500">Error: {error}</div>
+            )}
           </div>
         </div>
 
@@ -476,11 +487,6 @@ export default function CandlestickChart({
           />
         </div>
         
-        {/* Floating AI Chatbot with Auto-Analysis */}
-        <AIChatbot 
-          symbol={symbol} 
-          autoAnalyze={true}
-        />
 
         {/* Enhanced Stats with Modern Design */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
@@ -565,5 +571,35 @@ export default function CandlestickChart({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Wrapper component to include AITradingChat outside of Card
+export function CandlestickChartWithAI(props: CandlestickChartProps) {
+  const { symbol, timeframe = '1d', ...otherProps } = props;
+  
+  // Get data for AI chat (separate instance for positioning)
+  const { data: aiData } = useRealtimeData({
+    symbol,
+    timeframe,
+    updateInterval: 30000,
+    days: 60 // Increased to ensure sufficient data for AI analysis
+  });
+
+  return (
+    <>
+      <CandlestickChart {...props} />
+      {/* Enhanced Draggable AI Trading Chat with optimal positioning */}
+      <EnhancedDraggableAIChat 
+        symbol={symbol}
+        data={aiData}
+        autoAnalyze={true}
+        initialPosition={{
+          x: typeof window !== 'undefined' ? window.innerWidth - 350 : undefined,
+          y: typeof window !== 'undefined' ? Math.max(100, window.innerHeight - 500) : undefined
+        }}
+        className="chart-ai-assistant"
+      />
+    </>
   );
 }
