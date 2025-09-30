@@ -183,6 +183,7 @@ show_status() {
     echo -e "${GREEN}📱 Frontend: ${NC}http://localhost:$FRONTEND_PORT"
     echo -e "${GREEN}🤖 Backend:  ${NC}http://localhost:$BACKEND_PORT"
     echo -e "${GREEN}💬 AI Chat:  ${NC}http://localhost:$FRONTEND_PORT/chat"
+    echo -e "${GREEN}💬 AI Chart:  ${NC}http://localhost:$FRONTEND_PORT/chart"
     echo -e "${GREEN}📊 Analysis: ${NC}http://localhost:$FRONTEND_PORT/analysis"
     echo -e "\n${YELLOW}💡 Press Ctrl+C to stop all servers${NC}\n"
 }
