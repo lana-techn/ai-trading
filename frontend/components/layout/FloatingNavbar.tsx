@@ -22,6 +22,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import { SmoothThemeToggle } from '@/components/ui/SmoothThemeToggle';
+import AuthButton from '@/components/auth/AuthButton';
 
 // Navigation items
 const navigation = [
@@ -120,6 +121,9 @@ export default function FloatingNavbar() {
 
               {/* Right side actions */}
               <div className="flex items-center space-x-4">
+                {/* Auth Button */}
+                <AuthButton />
+                
                 {/* Theme Toggle */}
                 <div className="hidden sm:block">
                   <SmoothThemeToggle variant="button" size="sm" />
