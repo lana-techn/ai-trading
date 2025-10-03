@@ -1,2 +1,10 @@
 packages:
-  - 'frontend'
+  - frontend
+  - backend
+onlyBuiltDependencies:
+  - '@clerk/shared'
+  - '@nestjs/core'
+  - '@tailwindcss/oxide'
+  - sharp
+  - sqlite3
+  - unrs-resolver

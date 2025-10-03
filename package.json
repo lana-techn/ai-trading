@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "AI-powered trading analysis platform with Next.js frontend and FastAPI backend",
   "scripts": {
+    "setup": "pnpm install && pnpm approve-builds sqlite3 sharp @nestjs/core @tailwindcss/oxide @clerk/shared unrs-resolver",
     "dev": "./dev.sh",
+    "test:setup": "./dev.sh test",
     "start": "./dev.sh start",
     "frontend": "./dev.sh frontend",
     "backend": "./dev.sh backend",
@@ -13,10 +15,13 @@
     "frontend:install": "cd frontend && pnpm install",
     "frontend:build": "cd frontend && pnpm build",
     "frontend:start": "cd frontend && pnpm start",
-    "backend:install": "cd backend && pip install -r requirements.txt",
-    "backend:start": "cd backend && python3 minimal_server.py",
+    "backend:install": "cd backend && pnpm install",
+    "backend:build": "cd backend && pnpm build",
+    "backend:start": "cd backend && pnpm start",
+    "backend:start:dev": "cd backend && pnpm start:dev",
+    "backend:test": "cd backend && pnpm test",
     "install:all": "pnpm run backend:install && pnpm run frontend:install",
-    "build": "pnpm run frontend:build",
+    "build": "pnpm run backend:build && pnpm run frontend:build",
     "lint": "cd frontend && pnpm lint",
     "test": "cd frontend && pnpm test"
   },
@@ -39,6 +44,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "alphavantage": "^2.5.0",
-    "react-hook-form": "^7.63.0"
+    "react-hook-form": "^7.63.0",
+    "sqlite3": "^5.1.7"
   }
 }

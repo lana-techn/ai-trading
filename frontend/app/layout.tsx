@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import LandingLayout from '@/components/layout/LandingLayout';
 import { SmoothThemeProvider } from '@/components/providers/SmoothThemeProvider';
-import { AuthProvider } from '@/lib/auth-context';
+import { ClerkProvider } from "@clerk/nextjs";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,16 +21,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} antialiased scroll-smooth`} style={{ scrollBehavior: 'smooth' }}>
-        <SmoothThemeProvider>
-          <AuthProvider>
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body className={`${inter.className} antialiased scroll-smooth`} style={{ scrollBehavior: 'smooth' }}>
+          <SmoothThemeProvider>
             <LandingLayout>
               {children}
             </LandingLayout>
-          </AuthProvider>
-        </SmoothThemeProvider>
-      </body>
-    </html>
+          </SmoothThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

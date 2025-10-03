@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --port 3000",
+    "dev:turbo": "next dev --turbopack",
+    "dev:stable": "next dev --port 3000",
     "dev:analyze": "ANALYZE=true next dev --turbopack",
     "build": "next build --turbopack",
     "build:analyze": "ANALYZE=true next build --turbopack",
@@ -13,6 +15,7 @@
     "lighthouse": "lhci autorun"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.33.1",
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-slot": "^1.2.3",
