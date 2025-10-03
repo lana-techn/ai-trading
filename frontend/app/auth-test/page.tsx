@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAuth } from '@/lib/auth-context';
+import { SignedIn, SignedOut, useUser } from "@clerk/nextjs";
 import imageUploadService from '@/lib/imageUploadService';
-import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { 
   CheckCircleIcon, 
@@ -14,14 +13,14 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function AuthTestPage() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isLoaded } = useUser();
   const [testResults, setTestResults] = useState<{
-    authContext: 'loading' | 'success' | 'error';
+    clerkStatus: 'loading' | 'success' | 'error';
     supabaseClient: 'success' | 'error';
     imageUploadService: 'success' | 'error';
     imageUploadEnabled: boolean;
   }>({
-    authContext: 'loading',
+    clerkStatus: 'loading',
     supabaseClient: 'success',
     imageUploadService: 'success',
     imageUploadEnabled: false
@@ -29,14 +28,13 @@ export default function AuthTestPage() {
 
   React.useEffect(() => {
     const runTests = async () => {
-      // Test 1: Auth Context
-      const authResult = loading ? 'loading' : 'success';
+      const authResult: 'loading' | 'success' = !isLoaded ? 'loading' : 'success';
 
       // Test 2: Image Upload Service
       const imageUploadEnabled = imageUploadService.isImageUploadEnabled();
       
       // Test 3: Try to get user images (should handle gracefully)
-      let imageServiceResult = 'success';
+      let imageServiceResult: 'success' | 'error' = 'success';
       try {
         const result = await imageUploadService.getUserImages();
         if (!result.success && result.error?.includes('not configured')) {
@@ -47,17 +45,17 @@ export default function AuthTestPage() {
       }
 
       setTestResults({
-        authContext: authResult,
+        clerkStatus: authResult,
         supabaseClient: 'success', // If we got here, the client is working
         imageUploadService: imageServiceResult,
         imageUploadEnabled
       });
     };
 
-    if (!loading) {
+    if (isLoaded) {
       runTests();
     }
-  }, [loading]);
+  }, [isLoaded]);
 
   const getStatusIcon = (status: 'loading' | 'success' | 'error') => {
     switch (status) {
@@ -104,38 +102,38 @@ export default function AuthTestPage() {
           <UserIcon className="h-5 w-5 text-primary" />
           Authentication Status
         </h2>
-        
-        {loading ? (
+        {!isLoaded ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             Loading authentication status...
           </div>
         ) : (
           <div>
-            {isAuthenticated ? (
+            <SignedIn>
               <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                 <CheckCircleIcon className="h-5 w-5" />
-                Authenticated as {user?.email}
+                Authenticated as {user?.primaryEmailAddress?.emailAddress || user?.username}
               </div>
-            ) : (
+            </SignedIn>
+            <SignedOut>
               <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400">
                 <ExclamationTriangleIcon className="h-5 w-5" />
                 Not authenticated (this is expected)
               </div>
-            )}
+            </SignedOut>
           </div>
         )}
       </div>
 
       {/* Test Results */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <div className={cn("p-4 rounded-lg border", getStatusColor(testResults.authContext))}>
+        <div className={cn("p-4 rounded-lg border", getStatusColor(testResults.clerkStatus))}>
           <div className="flex items-center gap-2 mb-2">
-            {getStatusIcon(testResults.authContext)}
-            <span className="font-medium">Auth Context</span>
+            {getStatusIcon(testResults.clerkStatus)}
+            <span className="font-medium">Clerk Status</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            React authentication context is working properly
+            Clerk authentication is connected and responding
           </p>
         </div>
 
@@ -183,7 +181,7 @@ export default function AuthTestPage() {
         <div className="space-y-2 text-sm">
           <div className="flex items-start gap-2">
             <CheckCircleIcon className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-            <span>Authentication context loads without errors</span>
+            <span>Clerk authentication loads without errors</span>
           </div>
           <div className="flex items-start gap-2">
             <CheckCircleIcon className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
