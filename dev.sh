@@ -85,6 +85,38 @@ cleanup() {
     exit 0
 }
 
+# Function to ensure dependencies are properly installed
+ensure_dependencies() {
+    print_status "🔧 Ensuring all dependencies are properly installed..."
+    
+    # Go to project root
+    cd "$SCRIPT_DIR"
+    
+    # Check if node_modules exists, if not install everything
+    if [[ ! -d "node_modules" ]]; then
+        print_info "Installing root dependencies with pnpm..."
+        pnpm install
+        
+        # Approve build scripts for native modules like sqlite3
+        print_info "Approving build scripts for native modules..."
+        echo "y" | pnpm approve-builds sqlite3 sharp @nestjs/core @tailwindcss/oxide @clerk/shared unrs-resolver 2>/dev/null || true
+    fi
+    
+    # Ensure backend dependencies are installed
+    if [[ ! -d "$BACKEND_DIR/node_modules" ]]; then
+        print_info "Installing backend dependencies..."
+        cd "$BACKEND_DIR"
+        pnpm install
+    fi
+    
+    # Ensure frontend dependencies are installed
+    if [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
+        print_info "Installing frontend dependencies..."
+        cd "$FRONTEND_DIR"
+        pnpm install
+    fi
+}
+
 # Function to start backend
 start_backend() {
     print_status "🔧 Starting backend server..."
@@ -96,24 +128,25 @@ start_backend() {
     
     cd "$BACKEND_DIR"
     
-    # Check if virtual environment exists and activate it
-    if [[ -d "venv" ]]; then
-        print_info "Activating Python virtual environment"
-        source venv/bin/activate
-    fi
-    
-    # Check if minimal_server.py exists
-    if [[ ! -f "minimal_server.py" ]]; then
-        print_error "minimal_server.py not found in backend directory"
+    if [[ ! -f "package.json" ]]; then
+        print_error "package.json not found in backend directory"
         exit 1
     fi
+
+    # Ensure dependencies are installed
+    ensure_dependencies
     
-    # Start backend in background
-    python3 minimal_server.py &
+    # Start backend using the correct script from root
+    cd "$SCRIPT_DIR"
+    BACKEND_LOGFILE="$SCRIPT_DIR/backend.log"
+    > "$BACKEND_LOGFILE"  # Clear the log file
+    
+    # Start backend and redirect to logfile (backend is less interactive, so no tee needed)
+    pnpm run backend:start:dev > "$BACKEND_LOGFILE" 2>&1 &
     BACKEND_PID=$!
     echo "$BACKEND_PID" >> "$PIDFILE"
     
-    print_info "Backend PID: $BACKEND_PID"
+    print_info "Backend PID: $BACKEND_PID (logs: backend.log)"
     
     # Wait for backend to start
     local attempts=0
@@ -126,6 +159,15 @@ start_backend() {
         print_success "Backend server started on http://localhost:$BACKEND_PORT"
     else
         print_error "Backend failed to start on port $BACKEND_PORT"
+        print_info "Showing recent backend logs for debugging:"
+        if [ -s "$BACKEND_LOGFILE" ]; then
+            echo "==================== Backend Error Logs ===================="
+            tail -20 "$BACKEND_LOGFILE"
+            echo "============================================================="
+        else
+            print_warning "No backend logs found in $BACKEND_LOGFILE"
+        fi
+        print_info "For more details: tail -f backend.log"
         exit 1
     fi
 }
@@ -147,31 +189,62 @@ start_frontend() {
         exit 1
     fi
     
-    # Install dependencies if node_modules doesn't exist
-    if [[ ! -d "node_modules" ]]; then
-        print_info "Installing frontend dependencies with pnpm..."
-        pnpm install
+    # Ensure dependencies are installed
+    ensure_dependencies
+    
+    # Clean .next directory to prevent cache issues
+    if [[ -d ".next" ]]; then
+        print_info "Cleaning .next directory for fresh start..."
+        rm -rf .next
     fi
     
-    # Start frontend with pnpm
-    print_info "Starting Next.js with pnpm..."
-    pnpm dev &
+    # Start frontend with stable configuration (no turbopack by default)
+    print_info "Starting Next.js in stable mode..."
+    
+    # Use a named pipe for real-time log streaming
+    FRONTEND_LOGFILE="$SCRIPT_DIR/frontend.log"
+    > "$FRONTEND_LOGFILE"  # Clear the log file
+    
+    # Start frontend and redirect to both logfile and stdout with better error handling
+    (pnpm dev 2>&1 | tee "$FRONTEND_LOGFILE") &
     FRONTEND_PID=$!
     echo "$FRONTEND_PID" >> "$PIDFILE"
     
-    print_info "Frontend PID: $FRONTEND_PID"
+    print_info "Frontend PID: $FRONTEND_PID (logs: frontend.log)"
     
-    # Wait for frontend to start
+    # Wait for frontend to start with progress indicators
     local attempts=0
-    while ! check_port $FRONTEND_PORT && [ $attempts -lt 60 ]; do
+    print_info "Waiting for Next.js compilation..."
+    while ! check_port $FRONTEND_PORT && [ $attempts -lt 90 ]; do
         sleep 1
         attempts=$((attempts + 1))
+        if [ $attempts -eq 20 ]; then
+            print_info "Still compiling... Next.js first compile can take time"
+        elif [ $attempts -eq 50 ]; then
+            print_warning "Taking longer than usual. You can check compilation errors above or in frontend.log"
+            # Show last few lines of the log to help with debugging
+            if [ -s "$FRONTEND_LOGFILE" ]; then
+                print_info "Recent frontend logs:"
+                tail -10 "$FRONTEND_LOGFILE" | sed 's/^/  > /'
+            fi
+        fi
     done
+    
+    cd "$SCRIPT_DIR"
     
     if check_port $FRONTEND_PORT; then
         print_success "Frontend server started on http://localhost:$FRONTEND_PORT"
     else
-        print_error "Frontend failed to start on port $FRONTEND_PORT"
+        print_error "Frontend failed to start on port $FRONTEND_PORT after 90 seconds"
+        print_info "Showing recent frontend logs for debugging:"
+        if [ -s "$FRONTEND_LOGFILE" ]; then
+            echo "==================== Frontend Error Logs ===================="
+            tail -20 "$FRONTEND_LOGFILE"
+            echo "============================================================="
+        else
+            print_warning "No frontend logs found in $FRONTEND_LOGFILE"
+        fi
+        print_info "For more details: tail -f frontend.log"
         exit 1
     fi
 }
@@ -201,12 +274,14 @@ show_help() {
     echo "  stop, -s          Stop all running servers"
     echo "  status, -st       Show server status"
     echo "  clean, -c         Clean all dependencies and restart"
+    echo "  test, -t          Test setup and frontend stability"
     echo "  help, -h          Show this help message"
     echo ""
     echo "Examples:"
     echo "  $0                Start development environment"
     echo "  $0 backend        Start only backend"
     echo "  $0 frontend       Start only frontend"
+    echo "  $0 test           Test setup and stability"
     echo "  $0 stop           Stop all servers"
 }
 
@@ -233,12 +308,96 @@ show_server_status() {
     echo ""
 }
 
+# Function to test setup
+test_setup() {
+    print_status "🧵 Testing AI Trading Agent Setup"
+    echo "=================================="
+    
+    # Test SQLite3 installation
+    print_status "Testing SQLite3 installation..."
+    if [ -d "node_modules/.pnpm/sqlite3"*"/node_modules/sqlite3/build" ]; then
+        print_success "SQLite3 is properly built and installed"
+    else
+        print_error "SQLite3 build directory not found"
+        return 1
+    fi
+    
+    # Test workspace configuration
+    print_status "Testing pnpm workspace..."
+    if [ -f "pnpm-workspace.yaml" ]; then
+        print_success "pnpm workspace is configured"
+    else
+        print_error "pnpm workspace configuration missing"
+        return 1
+    fi
+    
+    # Test backend dependencies
+    print_status "Testing backend dependencies..."
+    if [ -f "backend/package.json" ]; then
+        print_success "Backend package.json exists"
+    else
+        print_error "Backend package.json not found"
+        return 1
+    fi
+    
+    # Test frontend dependencies
+    print_status "Testing frontend dependencies..."
+    if [ -f "frontend/package.json" ]; then
+        print_success "Frontend package.json exists"
+    else
+        print_error "Frontend package.json not found"
+        return 1
+    fi
+    
+    # Test frontend stability (quick test)
+    print_status "Testing frontend stability..."
+    kill_port $FRONTEND_PORT
+    cd frontend
+    if [ -d ".next" ]; then
+        rm -rf .next
+    fi
+    
+    print_info "Starting frontend test (15 seconds timeout)..."
+    pnpm dev > ../frontend-test.log 2>&1 &
+    TEST_PID=$!
+    
+    local attempts=0
+    while ! check_port $FRONTEND_PORT && [ $attempts -lt 15 ]; do
+        sleep 1
+        attempts=$((attempts + 1))
+    done
+    
+    kill $TEST_PID 2>/dev/null || true
+    cd ..
+    
+    if check_port $FRONTEND_PORT; then
+        print_success "Frontend test passed - started in ${attempts} seconds"
+        kill_port $FRONTEND_PORT
+    else
+        print_error "Frontend test failed - did not start within 15 seconds"
+        print_info "Check logs: tail -20 frontend-test.log"
+        return 1
+    fi
+    
+    print_success "All tests passed! Setup is working correctly."
+    echo ""
+    print_info "Ready to start development:"
+    print_info "  ./dev.sh          - Start both servers"
+    print_info "  ./dev.sh backend  - Backend only"
+    print_info "  ./dev.sh frontend - Frontend only"
+}
+
 # Function to clean and restart
 clean_restart() {
     print_status "🧹 Cleaning dependencies and cache..."
     
     # Stop any running servers
     stop_servers 2>/dev/null || true
+    
+    # Clean root node_modules and lock files
+    cd "$SCRIPT_DIR"
+    rm -rf node_modules pnpm-lock.yaml
+    print_info "Root dependencies cleaned"
     
     # Clean frontend
     if [[ -d "$FRONTEND_DIR" ]]; then
@@ -247,16 +406,27 @@ clean_restart() {
         print_info "Frontend cleaned"
     fi
     
-    # Clean backend cache
+    # Clean backend artifacts
     if [[ -d "$BACKEND_DIR" ]]; then
         cd "$BACKEND_DIR"
-        find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-        find . -name "*.pyc" -delete 2>/dev/null || true
-        print_info "Backend cache cleaned"
+        rm -rf node_modules dist pnpm-lock.yaml
+        print_info "Backend artifacts cleaned"
     fi
+    
+    # Return to script directory
+    cd "$SCRIPT_DIR"
     
     print_success "Cleanup completed"
     print_status "Starting fresh development environment..."
+    
+    # Reinstall and approve builds
+    print_info "Reinstalling dependencies..."
+    pnpm install
+    
+    print_info "Approving build scripts for native modules..."
+    echo "y" | pnpm approve-builds sqlite3 sharp @nestjs/core @tailwindcss/oxide @clerk/shared unrs-resolver 2>/dev/null || true
+    
+    print_success "Dependencies reinstalled with native modules built"
     
     # Restart
     start_servers
@@ -328,6 +498,9 @@ main() {
             ;;
         "clean"|"-c")
             clean_restart
+            ;;
+        "test"|"-t")
+            test_setup
             ;;
         "help"|"-h"|"--help")
             show_help
