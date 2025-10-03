@@ -60,20 +60,33 @@
    ```
 
 3. **Start the application**
+   
+   **macOS/Linux:**
    ```bash
    # Main development script (handles everything)
    ./dev.sh
    
-   # Or using pnpm
-   pnpm dev
-   
-   # Individual services
-   ./dev.sh frontend    # Frontend only
-   ./dev.sh backend     # Backend only
+   # Or simple scripts (recommended)
+   ./dev-simple.sh      # Both servers
+   ./dev-frontend.sh    # Frontend only
+   ./dev-backend.sh     # Backend only
    
    # Test setup
    ./dev.sh test        # Verify everything works
    ```
+   
+   **Windows:**
+   ```cmd
+   # Simple batch scripts (recommended)
+   dev-simple.bat       # Both servers
+   dev-frontend.bat     # Frontend only
+   dev-backend.bat      # Backend only
+   
+   # Or PowerShell
+   .\dev-simple.ps1      # PowerShell version
+   ```
+   
+   💡 **Windows users:** See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for detailed setup guide.
 
 4. **Access the application**
    - **Frontend**: http://localhost:3000

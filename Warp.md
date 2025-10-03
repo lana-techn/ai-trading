@@ -17,6 +17,8 @@ pnpm install:all
 ```
 
 ### Primary Development
+
+**macOS/Linux:**
 ```bash
 # RECOMMENDED: Simple development scripts (fixes ulimit issues)
 ./dev-simple.sh     # Start both frontend and backend
@@ -26,8 +28,24 @@ pnpm install:all
 # Alternative: Original complex script
 ./dev.sh            # Full development environment
 pnpm dev            # Same as above
+```
 
-# Development utilities
+**Windows:**
+```cmd
+# RECOMMENDED: Simple development scripts
+dev-simple.bat      # Start both frontend and backend
+dev-frontend.bat    # Next.js frontend only (port 3000) 
+dev-backend.bat     # NestJS backend only (port 8000)
+
+# PowerShell alternative
+.\dev-simple.ps1     # PowerShell version with better cleanup
+
+# Manual commands
+pnpm dev            # Root development command
+```
+
+**Development utilities (macOS/Linux only):**
+```bash
 ./dev.sh status     # Check server status
 ./dev.sh stop       # Stop all servers
 ./dev.sh clean      # Clean dependencies and restart
@@ -190,3 +208,35 @@ sudo launchctl limit maxfiles 65536 200000
 - **First run**: 30-90 seconds (Next.js 15 + many dependencies)
 - **Subsequent runs**: 3-10 seconds (with cache)
 - **Solution**: Be patient on first compilation
+
+### Windows-Specific Issues
+
+**PowerShell Execution Policy:**
+If you get execution policy errors with `.ps1` scripts:
+```powershell
+# Allow PowerShell scripts (run as Administrator)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine
+
+# Or for current user only
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Node.js Path Issues:**
+Ensure Node.js and pnpm are in your PATH:
+```cmd
+# Check if tools are available
+node --version
+pnpm --version
+
+# If not found, add to PATH or reinstall Node.js
+```
+
+**Port Already in Use (Windows):**
+```cmd
+# Find process using port
+netstat -ano | findstr :3000
+netstat -ano | findstr :8000
+
+# Kill process by PID
+taskkill /PID <PID_NUMBER> /F
+```
