@@ -10,11 +10,17 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 import { ChatService, ChatMessage } from './chat.service';
 
 class ChatRequestDto {
+  @IsString()
+  @IsNotEmpty()
   message!: string;
+  
+  @IsString()
+  @IsOptional()
   session_id?: string;
 }
 
@@ -24,6 +30,13 @@ export class ChatController {
 
   @Post()
   async handleChat(@Body() body: ChatRequestDto) {
+    if (!body || typeof body !== 'object') {
+      return {
+        success: false,
+        error: 'Invalid request body',
+      };
+    }
+    
     const message = body.message?.trim();
     if (!message) {
       return {
