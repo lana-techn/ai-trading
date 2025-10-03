@@ -18,14 +18,14 @@ pnpm install:all
 
 ### Primary Development
 ```bash
-# Start full development environment (frontend + backend)
-./dev.sh
-# OR
-pnpm dev
+# RECOMMENDED: Simple development scripts (fixes ulimit issues)
+./dev-simple.sh     # Start both frontend and backend
+./dev-frontend.sh   # Next.js frontend only (port 3000)
+./dev-backend.sh    # NestJS backend only (port 8000)
 
-# Start individual services
-./dev.sh backend    # NestJS backend only (port 8000)
-./dev.sh frontend   # Next.js frontend only (port 3000)
+# Alternative: Original complex script
+./dev.sh            # Full development environment
+pnpm dev            # Same as above
 
 # Development utilities
 ./dev.sh status     # Check server status
@@ -164,3 +164,29 @@ CHAT_MEMORY_LIMIT=20
 
 ### Migration Context
 Recently migrated from FastAPI (Python) to NestJS (TypeScript) while maintaining feature parity. All trading analysis, chat capabilities, and market data services are now TypeScript-based with improved scalability and maintainability.
+
+## Troubleshooting
+
+### File Limit Issues (macOS)
+If you encounter "Too many open files" errors, use the simple scripts which automatically fix ulimit:
+
+```bash
+# These scripts automatically set ulimit -n 65536
+./dev-simple.sh     # Recommended for development
+./dev-frontend.sh   # Frontend only
+./dev-backend.sh    # Backend only
+```
+
+**Manual fix (if needed):**
+```bash
+# Increase file limits for current session
+ulimit -n 65536
+
+# System-wide fix (requires admin)
+sudo launchctl limit maxfiles 65536 200000
+```
+
+### Frontend Compilation Time
+- **First run**: 30-90 seconds (Next.js 15 + many dependencies)
+- **Subsequent runs**: 3-10 seconds (with cache)
+- **Solution**: Be patient on first compilation
