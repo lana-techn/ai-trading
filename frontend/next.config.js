@@ -9,11 +9,6 @@ const nextConfig = {
       'framer-motion'
     ]
   },
-  
-  // Turbopack settings
-  turbopack: {
-    root: '/Users/em/web/trader-ai-agent'
-  },
 
   // Image optimization
   images: {
@@ -70,49 +65,18 @@ const nextConfig = {
     ]
   },
 
-  // Webpack optimizations
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Optimize bundle splitting
-    config.optimization.splitChunks = {
-      chunks: 'all',
-      cacheGroups: {
-        vendor: {
-          test: /[\\/]node_modules[\\/]/,
-          name: 'vendors',
-          chunks: 'all',
-          priority: 10
-        },
-        heroicons: {
-          test: /[\\/]node_modules[\\/]@heroicons[\\/]/,
-          name: 'heroicons',
-          chunks: 'all',
-          priority: 20
-        },
-        common: {
-          minChunks: 2,
-          chunks: 'all',
-          name: 'common',
-          priority: 5
-        }
-      }
-    };
-
-    // Tree shaking optimization
-    config.optimization.usedExports = true;
-    config.optimization.sideEffects = false;
-
-    // Bundle analyzer in development
-    if (dev && !isServer) {
+  // Webpack optimizations (simplified to prevent conflicts)
+  webpack: (config, { dev, isServer }) => {
+    // Only add bundle analyzer in development if requested
+    if (dev && !isServer && process.env.ANALYZE === 'true') {
       const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-      if (process.env.ANALYZE === 'true') {
-        config.plugins.push(
-          new BundleAnalyzerPlugin({
-            analyzerMode: 'server',
-            analyzerPort: 8888,
-            openAnalyzer: true
-          })
-        );
-      }
+      config.plugins.push(
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'server',
+          analyzerPort: 8888,
+          openAnalyzer: true
+        })
+      );
     }
 
     return config;

@@ -46,35 +46,33 @@
 
 2. **Install dependencies**
    ```bash
-   # Option 1: Automated installation (Recommended)
+   # Option 1: Automated setup (Recommended) - handles SQLite and native modules
+   pnpm setup
+   
+   # Option 2: Legacy installation
    pnpm install:all
    
-   # Option 2: Manual installation
-   # Backend dependencies
-   cd backend
-   pip3 install -r requirements.txt
-   pip3 install pydantic-settings seaborn
-   
-   # Frontend dependencies
-   cd ../frontend
+   # Option 3: Manual installation (for NestJS backend)
+   # Install all dependencies including SQLite
    pnpm install
-   cd ..
+   # Approve native module builds (required for SQLite)
+   pnpm approve-builds sqlite3 sharp @nestjs/core
    ```
 
 3. **Start the application**
    ```bash
-   # Option 1: Optimized development script (Recommended)
+   # Main development script (handles everything)
    ./dev.sh
    
-   # Option 2: Using pnpm scripts
+   # Or using pnpm
    pnpm dev
    
-   # Option 3: Start individual services
+   # Individual services
    ./dev.sh frontend    # Frontend only
    ./dev.sh backend     # Backend only
    
-   # Option 4: Legacy scripts (still available)
-   ./start_servers.sh
+   # Test setup
+   ./dev.sh test        # Verify everything works
    ```
 
 4. **Access the application**
@@ -120,7 +118,10 @@ PORT=8000
 
 ### Development Scripts
 ```bash
-# Start development environment
+# Setup and installation
+pnpm setup               # 🌟 Complete setup with native modules (SQLite, etc.)
+
+# Main development (all-in-one script)
 ./dev.sh                 # Start both frontend and backend
 pnpm dev                 # Alternative using pnpm
 
@@ -129,6 +130,7 @@ pnpm dev                 # Alternative using pnpm
 ./dev.sh backend         # Start only backend (port 8000)
 
 # Utility commands
+./dev.sh test            # Test setup and stability
 ./dev.sh status          # Check server status
 ./dev.sh stop            # Stop all servers
 ./dev.sh clean           # Clean dependencies and restart
