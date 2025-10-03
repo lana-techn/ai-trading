@@ -47,17 +47,6 @@ interface AnalysisHistory {
   actual_outcome?: number;
 }
 
-
-interface AnalysisHistory {
-  id: string;
-  symbol: string;
-  timestamp: string;
-  action: 'buy' | 'sell' | 'hold';
-  confidence: number;
-  result?: 'correct' | 'incorrect' | 'pending';
-  actual_outcome?: number;
-}
-
 const TIMEFRAMES = [
   { value: '1m', label: '1 Minute', icon: '⚡' },
   { value: '5m', label: '5 Minutes', icon: '🔥' },
@@ -445,7 +434,7 @@ export default function EnhancedAIAnalysis() {
                 </div>
               </CardHeader>
               <CardContent className="p-6">
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={(e) => {e.preventDefault(); handleSubmit(onSubmit)(e);}} className="space-y-6">
                     
                   {/* Step 1: Trading Symbol & Timeframe */}
                   <div className="bg-muted/30 rounded-xl p-6">

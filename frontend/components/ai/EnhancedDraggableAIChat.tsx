@@ -538,7 +538,7 @@ export function EnhancedDraggableAIChat({
 
               {/* Input with mobile optimization */}
               <div className="p-2 border-t">
-                <form onSubmit={handleSubmit} className={`relative rounded-lg border ${themeStyles.container} focus-within:ring-1 focus-within:ring-blue-500/50 p-1`}>
+                <form onSubmit={(e) => {e.preventDefault(); handleSubmit(e);}} className={`relative rounded-lg border ${themeStyles.container} focus-within:ring-1 focus-within:ring-blue-500/50 p-1`}>
                   <ChatInput
                     value={input}
                     onChange={(e) => setInput(e.target.value)}

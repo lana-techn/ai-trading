@@ -13,114 +13,179 @@ import { cn, formatTimestamp } from '@/lib/utils';
 import { tradingApi, handleApiError } from '@/lib/api';
 import ImageUpload from './ImageUpload';
 
-// Helper component for formatting AI messages
-const MessageContent = ({ content }: { content: string }) => {
-  const formatLine = (line: string) => {
-  const formattedLine = line;
-    
-    // Handle markdown headers (###, ##, #)
-    if (formattedLine.match(/^#{1,3}\s+/)) {
-      const headerLevel = (formattedLine.match(/^#{1,3}/) || [''])[0].length;
-      const headerText = formattedLine.replace(/^#{1,3}\s+/, '').trim();
-      const sizeClass = headerLevel === 1 ? 'text-lg' : headerLevel === 2 ? 'text-base' : 'text-sm';
-      return (
-        <h3 className={`font-bold ${sizeClass} text-foreground mb-2 mt-4`}>
-          {headerText}
-        </h3>
-      );
+// Helper component for formatting AI messages - Ultra Safe Version
+const MessageContent = ({ content = '' }: { content?: string }) => {
+  try {
+    // Ultra-safe content validation
+    if (!content || content === null || content === undefined) {
+      return <div className="text-sm text-muted-foreground italic">No content available</div>;
     }
     
-    // Handle bold text (**text**)
-    const boldParts = formattedLine.split(/\*\*(.*?)\*\*/);
-    if (boldParts.length > 1) {
-      return (
-        <span>
-          {boldParts.map((part, index) => 
-            index % 2 === 1 ? 
-              <strong key={index} className="font-semibold text-foreground">{part}</strong> : 
-              <span key={index}>{part}</span>
-          )}
-        </span>
-      );
+    const safeContent = String(content);
+    if (!safeContent || safeContent.trim() === '') {
+      return <div className="text-sm text-muted-foreground italic">Empty content</div>;
     }
+  
+    const formatLine = (line: unknown) => {
+      // Ultra-safe line validation
+      if (!line || line === null || line === undefined) return null;
+      
+      const formattedLine = String(line);
+      if (!formattedLine || formattedLine.trim() === '') return null;
+      
+      try {
+        // Handle markdown headers (###, ##, #)
+        if (formattedLine.match && formattedLine.match(/^#{1,3}\s+/)) {
+          const headerMatch = formattedLine.match(/^#{1,3}/);
+          const headerLevel = headerMatch ? headerMatch[0].length : 1;
+          const headerText = formattedLine.replace(/^#{1,3}\s+/, '').trim();
+          const sizeClass = headerLevel === 1 ? 'text-lg' : headerLevel === 2 ? 'text-base' : 'text-sm';
+          return (
+            <h3 className={`font-bold ${sizeClass} text-foreground mb-2 mt-4`}>
+              {headerText}
+            </h3>
+          );
+        }
+        
+        // Handle bold text (**text**) - safer split
+        if (formattedLine.includes && formattedLine.includes('**')) {
+          const boldParts = formattedLine.split(/\*\*(.*?)\*\*/).filter(Boolean);
+          if (boldParts.length > 1) {
+            return (
+              <span>
+                {boldParts.map((part, index) => {
+                  if (!part) return null;
+                  return index % 2 === 1 ? 
+                    <strong key={index} className="font-semibold text-foreground">{part}</strong> : 
+                    <span key={index}>{part}</span>
+                })}
+              </span>
+            );
+          }
+        }
+        
+        // Handle bullet points
+        if (formattedLine.match && formattedLine.match(/^[\s]*[•\-\*]\s+/)) {
+          const bulletText = formattedLine.replace(/^[\s]*[•\-\*]\s+/, '').trim();
+          return (
+            <div className="flex items-start gap-2 my-1">
+              <span className="text-primary text-sm font-bold mt-0.5">•</span>
+              <span className="flex-1">{bulletText}</span>
+            </div>
+          );
+        }
+        
+        // Handle numbered lists
+        if (formattedLine.match && formattedLine.match(/^\d+\.\s+/)) {
+          const numberMatch = formattedLine.match(/^(\d+)\.(\s+)(.*)$/);
+          if (numberMatch && numberMatch.length >= 4) {
+            return (
+              <div className="flex items-start gap-2 my-1">
+                <span className="text-primary text-sm font-bold mt-0.5">{numberMatch[1]}.</span>
+                <span className="flex-1">{numberMatch[3]}</span>
+              </div>
+            );
+          }
+        }
+        
+        return <span>{formattedLine}</span>;
+      } catch (lineError) {
+        console.warn('Error formatting line:', lineError);
+        return <span>{formattedLine}</span>;
+      }
+    };
     
-    // Handle bullet points
-    if (formattedLine.match(/^[\s]*[•\-\*]\s+/)) {
-      const bulletText = formattedLine.replace(/^[\s]*[•\-\*]\s+/, '').trim();
+    try {
+      // Ultra-safe paragraph splitting
+      const paragraphs = safeContent.split(/\n\s*\n/).filter(p => p && typeof p === 'string' && p.trim());
+      
       return (
-        <div className="flex items-start gap-2 my-1">
-          <span className="text-primary text-sm font-bold mt-0.5">•</span>
-          <span className="flex-1">{bulletText}</span>
+        <div className="space-y-3">
+          {paragraphs.map((paragraph, index) => {
+            if (!paragraph || typeof paragraph !== 'string' || paragraph.trim() === '') return null;
+            
+            try {
+              // Ultra-safe line splitting
+              const lines = paragraph.split('\n').filter(line => line && typeof line === 'string' && line.trim());
+              
+              // Handle warnings and alerts
+              if (paragraph.includes && (paragraph.includes('⚠️') || paragraph.includes('**Risk Warning**'))) {
+                return (
+                  <div key={index} className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-yellow-600 dark:text-yellow-400">⚠️</span>
+                      <div className="text-yellow-800 dark:text-yellow-200 text-sm font-medium">
+                        {paragraph.replace('⚠️', '').replace('**Risk Warning**:', '').trim()}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              
+              // Handle code blocks or special sections
+              if (paragraph.includes && paragraph.includes('```')) {
+                return (
+                  <div key={index} className="bg-muted/50 border border-border rounded-lg p-3 font-mono text-sm">
+                    {paragraph.replace(/```/g, '').trim()}
+                  </div>
+                );
+              }
+              
+              // Regular paragraph with line-by-line formatting
+              return (
+                <div key={index} className="space-y-1">
+                  {lines.map((line, lineIndex) => {
+                    try {
+                      const formattedLine = formatLine(line);
+                      return formattedLine ? (
+                        <div key={lineIndex}>
+                          {formattedLine}
+                        </div>
+                      ) : null;
+                    } catch (lineMapError) {
+                      console.warn('Error mapping line:', lineMapError);
+                      return (
+                        <div key={lineIndex} className="text-sm">
+                          {String(line)}
+                        </div>
+                      );
+                    }
+                  }).filter(Boolean)}
+                </div>
+              );
+            } catch (paragraphError) {
+              console.warn('Error processing paragraph:', paragraphError);
+              return (
+                <div key={index} className="text-sm">
+                  {paragraph}
+                </div>
+              );
+            }
+          }).filter(Boolean)}
+        </div>
+      );
+    } catch (splitError) {
+      console.warn('Error splitting paragraphs:', splitError);
+      return (
+        <div className="text-sm">
+          {safeContent}
         </div>
       );
     }
-    
-    // Handle numbered lists
-    if (formattedLine.match(/^\d+\.\s+/)) {
-      const numberMatch = formattedLine.match(/^(\d+)\.(\s+)(.*)$/);
-      if (numberMatch) {
-        return (
-          <div className="flex items-start gap-2 my-1">
-            <span className="text-primary text-sm font-bold mt-0.5">{numberMatch[1]}.</span>
-            <span className="flex-1">{numberMatch[3]}</span>
-          </div>
-        );
-      }
-    }
-    
-    return <span>{formattedLine}</span>;
-  };
-  
-  // Split content by paragraphs
-  const paragraphs = content.split(/\n\s*\n/);
-  
-  return (
-    <div className="space-y-3">
-      {paragraphs.map((paragraph, index) => {
-        const lines = paragraph.split('\n').filter(line => line.trim());
-        
-        // Handle warnings and alerts
-        if (paragraph.includes('⚠️') || paragraph.includes('**Risk Warning**')) {
-          return (
-            <div key={index} className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
-              <div className="flex items-start gap-2">
-                <span className="text-yellow-600 dark:text-yellow-400">⚠️</span>
-                <div className="text-yellow-800 dark:text-yellow-200 text-sm font-medium">
-                  {paragraph.replace('⚠️', '').replace('**Risk Warning**:', '').trim()}
-                </div>
-              </div>
-            </div>
-          );
-        }
-        
-        // Handle code blocks or special sections
-        if (paragraph.includes('```')) {
-          return (
-            <div key={index} className="bg-muted/50 border border-border rounded-lg p-3 font-mono text-sm">
-              {paragraph.replace(/```/g, '').trim()}
-            </div>
-          );
-        }
-        
-        // Regular paragraph with line-by-line formatting
-        return (
-          <div key={index} className="space-y-1">
-            {lines.map((line, lineIndex) => (
-              <div key={lineIndex}>
-                {formatLine(line)}
-              </div>
-            ))}
-          </div>
-        );
-      })}
-    </div>
-  );
+  } catch (error) {
+    console.warn('Error rendering message content:', error);
+    return (
+      <div className="text-sm text-red-500">
+        Unable to display message content
+      </div>
+    );
+  }
 };
 
 interface ChatMessage {
   id: string;
   type: 'user' | 'ai' | 'image';
-  message: string;
+  message?: string;
   timestamp: string;
   intent?: Record<string, unknown>;
   suggestions?: string[];
@@ -301,9 +366,9 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
     }
   };
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (text?: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(text ?? '');
     } catch (err) {
       console.error('Failed to copy text:', err);
     }
@@ -404,8 +469,16 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
                     </div>
                     <span className="text-muted-foreground">AI is thinking...</span>
                   </div>
-                ) : (
+                ) : typeof message.message === 'string' ? (
                   <MessageContent content={message.message} />
+                ) : message.message ? (
+                  <div className="text-sm">
+                    {String(message.message)}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground italic">
+                    [Message content unavailable]
+                  </div>
                 )}
               </div>
               
