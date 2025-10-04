@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { formatISO } from 'date-fns';
 
+import { AgentRouterService } from '../ai/services/agent-router.service';
 import {
   MarketDataService,
   MarketDataResult,
@@ -38,6 +39,7 @@ export class AnalysisService {
   constructor(
     private readonly marketDataService: MarketDataService,
     private readonly auditService: AuditService,
+    private readonly agentRouter: AgentRouterService,
   ) {}
 
   async analyze(dto: AnalysisRequestDto): Promise<AnalysisResult> {
@@ -48,6 +50,36 @@ export class AnalysisService {
 
     const { action, confidence, reasoning, riskLevel } = this.deriveDecision(indicators, marketData);
 
+    let qwenAnalysis = null;
+    let modelsUsed = ['technical_sma', 'rsi', 'volatility_model'];
+
+    if (dto.includeChart) {
+      const chartDataSummary = {
+        latestPrice: marketData.latestPrice,
+        priceChange: marketData.candles[0]?.close - marketData.candles[marketData.candles.length - 1]?.close,
+        highestPrice: Math.max(...marketData.candles.map(c => c.high)),
+        lowestPrice: Math.min(...marketData.candles.map(c => c.low)),
+      };
+
+      const qwenResponse = await this.agentRouter.process({
+        type: 'chart_analysis',
+        symbol: dto.symbol,
+        timeframe,
+        chartData: chartDataSummary,
+        technicalIndicators: indicators,
+      });
+
+      if (qwenResponse.success) {
+        qwenAnalysis = {
+          analysis: qwenResponse.response,
+          tradingSignal: qwenResponse.data?.tradingSignal,
+          confidence: qwenResponse.data?.confidence,
+          keyInsights: qwenResponse.data?.keyInsights,
+        };
+        modelsUsed.push('qwen');
+      }
+    }
+
     const response: AnalysisResult = {
       success: true,
       symbol: dto.symbol,
@@ -55,10 +87,10 @@ export class AnalysisService {
       confidence,
       reasoning,
       risk_level: riskLevel,
-      models_used: ['technical_sma', 'rsi', 'volatility_model'],
+      models_used: modelsUsed,
       technical_indicators: indicators,
-      qwen_analysis: null,
-      gemini_analysis: dto.includeChart ? { summary: 'Chart insights generated from price action.' } : null,
+      qwen_analysis: qwenAnalysis,
+      gemini_analysis: null,
       risk_assessment: this.buildRiskAssessment(indicators, marketData),
       timestamp: formatISO(new Date()),
       execution_time_ms: Date.now() - start,
@@ -75,6 +107,7 @@ export class AnalysisService {
         timeframe,
         riskAssessment: response.risk_assessment,
         indicators: response.technical_indicators,
+        qwenAnalysis,
       },
     });
 

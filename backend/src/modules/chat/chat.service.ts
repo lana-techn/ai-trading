@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { AgentRouterService } from '../ai/services/agent-router.service';
+import { GeminiChatMessage } from '../ai/services/gemini.service';
 import { MarketDataService } from '../market-data/market-data.service';
 
 export interface ChatMessage {
@@ -19,7 +21,11 @@ export class ChatService {
   private readonly sessions = new Map<string, SessionMemory>();
   private readonly memoryLimit: number;
 
-  constructor(private readonly configService: ConfigService, private readonly marketDataService: MarketDataService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly marketDataService: MarketDataService,
+    private readonly agentRouter: AgentRouterService,
+  ) {
     this.memoryLimit = this.configService.get<number>('chat.memoryLimit', 20);
   }
 
@@ -29,18 +35,42 @@ export class ChatService {
     this.trimSession(session);
 
     const symbol = this.extractSymbol(message);
-    let marketSummary = '';
+    let marketContext = '';
 
     if (symbol) {
       try {
         const price = await this.marketDataService.getRealTimePrice(symbol);
-        marketSummary = `Latest ${symbol} price: ${price.price.toFixed(2)} (${price.source}).`;
+        marketContext = `Current market data for ${symbol}: Price ${price.price.toFixed(2)} (${price.source}).`;
       } catch (error) {
         this.logger.debug(`Failed to fetch price for ${symbol}: ${(error as Error).message}`);
       }
     }
 
-    const assistantMessage = this.composeResponse(message, marketSummary, symbol);
+    const conversationHistory: GeminiChatMessage[] = session.messages
+      .slice(0, -1)
+      .map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: msg.content,
+      }));
+
+    const systemContext = [
+      'You are a professional trading assistant. Provide helpful insights about trading and market analysis.',
+      marketContext,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const aiResponse = await this.agentRouter.process({
+      type: 'chat',
+      message,
+      conversationHistory,
+      context: systemContext,
+    });
+
+    const assistantMessage = aiResponse.success
+      ? aiResponse.response
+      : this.composeResponse(message, marketContext, symbol);
+
     session.messages.push({ role: 'assistant', content: assistantMessage, timestamp: Date.now() });
 
     return {
@@ -48,6 +78,7 @@ export class ChatService {
       response: assistantMessage,
       suggestions: this.buildSuggestions(symbol),
       session_id: sessionId,
+      model_used: aiResponse.modelUsed,
     };
   }
 

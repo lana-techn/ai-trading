@@ -28,4 +28,8 @@ export default () => ({
   chat: {
     memoryLimit: parseInt(process.env.CHAT_MEMORY_LIMIT ?? '20', 10),
   },
+  ai: {
+    geminiApiKey: process.env.GEMINI_API_KEY ?? '',
+    openRouterApiKey: process.env.OPENROUTER_API_KEY ?? '',
+  },
 });

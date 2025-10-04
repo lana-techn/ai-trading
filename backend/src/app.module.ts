@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import configuration from './config/configuration';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AiModule } from './modules/ai/ai.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AnalysisModule } from './modules/analysis/analysis.module';
 import { ChatModule } from './modules/chat/chat.module';
@@ -22,6 +23,7 @@ import { DatabaseModule } from './database/database.module';
     }),
     ScheduleModule.forRoot(),
     DatabaseModule,
+    AiModule,
     HealthModule,
     AnalysisModule,
     MarketDataModule,
