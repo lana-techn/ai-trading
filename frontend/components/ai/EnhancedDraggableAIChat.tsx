@@ -18,7 +18,6 @@ import {
   MarketAnalysis,
   AIInsight 
 } from "@/lib/ai-analysis"
-import { clearIndicatorCache } from "@/lib/analysis/technical-indicators"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 
@@ -401,7 +400,7 @@ export function EnhancedDraggableAIChat({
   useEffect(() => {
     return () => {
       // Clear cache when component unmounts
-      clearIndicatorCache()
+      // clearIndicatorCache() // Commented out as the module was not found
     }
   }, [])
 

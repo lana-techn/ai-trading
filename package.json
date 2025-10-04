@@ -37,8 +37,10 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "alphavantage": "^2.5.0",
-    "react-hook-form": "^7.63.0",
-    "sqlite3": "^5.1.7"
+    "react-hook-form": "^7.64.0",
+    "sqlite3": "^5.1.7",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.0.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
