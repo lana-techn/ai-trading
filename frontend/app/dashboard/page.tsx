@@ -78,32 +78,49 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Welcome Section */}
-      <Card className="bg-gradient-to-r from-primary to-chart-5 border-0 relative" padding="lg">
+      <Card className="border-border bg-card relative" padding="lg">
         {isDevelopmentMode && (
           <div className="absolute top-4 right-4">
-            <StatusBadge status="warning" className="bg-warning/20 text-warning border-warning/30" />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 dark:bg-yellow-400/10 text-yellow-700 dark:text-yellow-400 rounded-lg border border-yellow-500/30 dark:border-yellow-400/30">
+              <div className="h-2 w-2 bg-yellow-600 dark:bg-yellow-400 rounded-full animate-pulse" />
+              <span className="text-xs font-medium">Dev Mode</span>
+            </div>
           </div>
         )}
-        <div className="flex items-center justify-between text-primary-foreground">
-          <div>
-<h1 className="text-2xl font-bold mb-2">Welcome to NousTrade</h1>
-            <p className="text-primary-foreground/90">
-              Advanced hybrid AI trading analysis powered by Qwen and Gemini models
-              {isDevelopmentMode && <span className="block text-sm mt-1 opacity-80">Running with mock data - Backend not connected</span>}
-            </p>
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex items-start gap-4 flex-1">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <CpuChipIcon className="h-9 w-9 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-foreground mb-2">Welcome to NousTrade</h1>
+              <p className="text-muted-foreground text-base leading-relaxed">
+                Advanced hybrid AI trading analysis powered by Qwen and Gemini models
+                {isDevelopmentMode && <span className="block text-sm mt-2 text-yellow-700 dark:text-yellow-400 font-medium">⚠️ Running with mock data - Backend not connected</span>}
+              </p>
+            </div>
           </div>
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold">2</div>
-              <div className="text-sm opacity-90">AI Models</div>
+          <div className="hidden lg:flex items-center gap-6">
+            <div className="text-center px-4">
+              <div className="h-12 w-12 rounded-xl bg-blue-500/10 dark:bg-blue-400/10 flex items-center justify-center mx-auto mb-2">
+                <CpuChipIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="text-2xl font-bold text-foreground">2</div>
+              <div className="text-xs text-muted-foreground font-medium mt-1">AI Models</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">30+</div>
-              <div className="text-sm opacity-90">Indicators</div>
+            <div className="text-center px-4">
+              <div className="h-12 w-12 rounded-xl bg-purple-500/10 dark:bg-purple-400/10 flex items-center justify-center mx-auto mb-2">
+                <ChartBarIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="text-2xl font-bold text-foreground">30+</div>
+              <div className="text-xs text-muted-foreground font-medium mt-1">Trading Pairs</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">3</div>
-              <div className="text-sm opacity-90">Markets</div>
+            <div className="text-center px-4">
+              <div className="h-12 w-12 rounded-xl bg-emerald-500/10 dark:bg-emerald-400/10 flex items-center justify-center mx-auto mb-2">
+                <BoltIcon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="text-2xl font-bold text-foreground">3</div>
+              <div className="text-xs text-muted-foreground font-medium mt-1">Markets</div>
             </div>
           </div>
         </div>
@@ -116,28 +133,30 @@ export default function Dashboard() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">AI Systems</p>
+                <p className="text-sm text-muted-foreground font-medium">AI Systems</p>
                 <p className={cn(
-                  "font-semibold",
+                  "text-lg font-bold",
                   healthStatus?.services?.hybrid_ai === 'operational' 
-                    ? "text-success" 
+                    ? "text-emerald-600 dark:text-emerald-400" 
                     : healthStatus?.services?.hybrid_ai === 'development'
-                    ? "text-info"
-                    : "text-destructive"
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-red-600 dark:text-red-400"
                 )}>
                   {isLoading ? 'Checking...' : 
                    healthStatus?.services?.hybrid_ai === 'operational' ? 'Online' :
                    healthStatus?.services?.hybrid_ai === 'development' ? 'Dev Mode' : 'Offline'}
                 </p>
               </div>
-              <CpuChipIcon className={cn(
-                "h-8 w-8",
+              <div className={cn(
+                "h-12 w-12 rounded-lg flex items-center justify-center",
                 healthStatus?.services?.hybrid_ai === 'operational' 
-                  ? "text-success" 
+                  ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400" 
                   : healthStatus?.services?.hybrid_ai === 'development'
-                  ? "text-info"
-                  : "text-destructive"
-              )} />
+                  ? "bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400"
+                  : "bg-red-500/10 text-red-600 dark:bg-red-400/10 dark:text-red-400"
+              )}>
+                <CpuChipIcon className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -147,28 +166,30 @@ export default function Dashboard() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Market Data</p>
+                <p className="text-sm text-muted-foreground font-medium">Market Data</p>
                 <p className={cn(
-                  "font-semibold",
+                  "text-lg font-bold",
                   healthStatus?.services?.market_data === 'operational' 
-                    ? "text-success" 
+                    ? "text-emerald-600 dark:text-emerald-400" 
                     : healthStatus?.services?.market_data === 'development'
-                    ? "text-info"
-                    : "text-destructive"
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-red-600 dark:text-red-400"
                 )}>
                   {isLoading ? 'Checking...' : 
                    healthStatus?.services?.market_data === 'operational' ? 'Live' :
                    healthStatus?.services?.market_data === 'development' ? 'Mock Data' : 'Delayed'}
                 </p>
               </div>
-              <ChartBarIcon className={cn(
-                "h-8 w-8",
+              <div className={cn(
+                "h-12 w-12 rounded-lg flex items-center justify-center",
                 healthStatus?.services?.market_data === 'operational' 
-                  ? "text-success" 
+                  ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400" 
                   : healthStatus?.services?.market_data === 'development'
-                  ? "text-info"
-                  : "text-destructive"
-              )} />
+                  ? "bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400"
+                  : "bg-red-500/10 text-red-600 dark:bg-red-400/10 dark:text-red-400"
+              )}>
+                <ChartBarIcon className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -178,12 +199,14 @@ export default function Dashboard() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Portfolio Value</p>
-                <p className="font-semibold text-card-foreground">
+                <p className="text-sm text-muted-foreground font-medium">Portfolio Value</p>
+                <p className="text-lg font-bold text-foreground">
                   {formatCurrency(MOCK_PORTFOLIO.totalValue)}
                 </p>
               </div>
-              <CurrencyDollarIcon className="h-8 w-8 text-primary" />
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                <CurrencyDollarIcon className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -193,20 +216,27 @@ export default function Dashboard() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Today&apos;s P&L</p>
+                <p className="text-sm text-muted-foreground font-medium">Today&apos;s P&L</p>
                 <p className={cn(
-                  "font-semibold flex items-center space-x-1",
-                  MOCK_PORTFOLIO.dayChange >= 0 ? "text-trading-bullish" : "text-trading-bearish"
+                  "text-lg font-bold flex items-center space-x-1",
+                  MOCK_PORTFOLIO.dayChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
                 )}>
                   <span>{formatCurrency(MOCK_PORTFOLIO.dayChange)}</span>
-                  <span className="text-sm">({formatPercentage(MOCK_PORTFOLIO.dayChangePercent)})</span>
+                  <span className="text-sm font-medium">({formatPercentage(MOCK_PORTFOLIO.dayChangePercent)})</span>
                 </p>
               </div>
-              {MOCK_PORTFOLIO.dayChange >= 0 ? (
-                <ArrowTrendingUpIcon className="h-8 w-8 text-trading-bullish" />
-              ) : (
-                <ArrowTrendingDownIcon className="h-8 w-8 text-trading-bearish" />
-              )}
+              <div className={cn(
+                "h-12 w-12 rounded-lg flex items-center justify-center",
+                MOCK_PORTFOLIO.dayChange >= 0 
+                  ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400" 
+                  : "bg-red-500/10 text-red-600 dark:bg-red-400/10 dark:text-red-400"
+              )}>
+                {MOCK_PORTFOLIO.dayChange >= 0 ? (
+                  <ArrowTrendingUpIcon className="h-6 w-6" />
+                ) : (
+                  <ArrowTrendingDownIcon className="h-6 w-6" />
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
