@@ -10,14 +10,13 @@ const API_ROUTES = ['/api', '/auth'];
 export default clerkMiddleware((auth, req: NextRequest) => {
   const { pathname } = req.nextUrl;
   
-  // Handle Server Action errors more gracefully
-  if (req.method === 'POST' && req.nextUrl.pathname === '/') {
-    // Check if this might be a stale Server Action request
-    const contentType = req.headers.get('content-type') || '';
-    if (contentType.includes('text/plain') || req.headers.get('next-action')) {
-      // This looks like a stale Server Action, redirect to home
-      return NextResponse.redirect(new URL('/', req.url));
-    }
+  // Handle stale Server Action requests (from old builds)
+  if (req.method === 'POST' && req.headers.get('next-action')) {
+    // Don't redirect - let Next.js handle it with proper error
+    // Just add a header to indicate stale action
+    const response = NextResponse.next();
+    response.headers.set('X-Stale-Action', 'true');
+    return response;
   }
   
   // Create response with performance optimizations
