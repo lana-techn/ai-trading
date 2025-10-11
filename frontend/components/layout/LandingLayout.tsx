@@ -5,7 +5,7 @@
 
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, memo } from 'react';
 import { usePathname } from 'next/navigation';
 import FloatingNavbar from './FloatingNavbar';
 
@@ -13,7 +13,7 @@ interface LandingLayoutProps {
   children: ReactNode;
 }
 
-export default function LandingLayout({ children }: LandingLayoutProps) {
+function LandingLayout({ children }: LandingLayoutProps) {
   const pathname = usePathname();
   const isLandingPage = pathname === '/';
   
@@ -37,3 +37,5 @@ export default function LandingLayout({ children }: LandingLayoutProps) {
     </div>
   );
 }
+
+export default memo(LandingLayout);

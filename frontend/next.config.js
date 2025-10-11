@@ -2,20 +2,13 @@
 const nextConfig = {
   // Enable experimental features for better performance
   experimental: {
-    // Optimized bundling
+    // Optimized bundling - load only what's needed
     optimizePackageImports: [
       '@heroicons/react',
       'next-themes',
-      'framer-motion',
       '@radix-ui/react-avatar',
       '@radix-ui/react-slot',
       'lucide-react',
-      '@clerk/nextjs',
-      '@tiptap/react',
-      '@tiptap/starter-kit',
-      'apexcharts',
-      'react-apexcharts',
-      'lightweight-charts'
     ],
     // Optimize CSS (if available in your version)
     ...(process.env.NODE_ENV === 'production' ? { optimizeCss: true } : {}),
@@ -44,6 +37,8 @@ const nextConfig = {
 
   // Compression
   compress: true,
+  
+  // SWC minification is enabled by default in Next.js 15+
 
   // Headers for better caching and security
   async headers() {

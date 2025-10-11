@@ -243,10 +243,10 @@ export default function PaperTradingSimulator({ className }: PaperTradingSimulat
             
             <Button
               onClick={() => setShowTradeModal(true)}
-              className="bg-primary hover:bg-primary-hover text-primary-foreground transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
-              size="md"
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg group px-6"
             >
-              <PlusIcon className="h-4 w-4 mr-2 transition-transform group-hover:rotate-90" />
+              <PlusIcon className="h-5 w-5 mr-2 transition-transform duration-300 group-hover:rotate-90" />
               New Trade
             </Button>
           </div>
@@ -255,32 +255,30 @@ export default function PaperTradingSimulator({ className }: PaperTradingSimulat
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Cash Balance */}
-            <Card className="bg-gradient-to-br from-info/10 via-card to-primary/5 border-info/30 hover:border-info/50 transition-all duration-300 group">
+            <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 group hover:shadow-md">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-info text-sm font-medium group-hover:text-info/80 transition-colors">Cash Balance</p>
-                    <p className="text-2xl font-bold text-card-foreground group-hover:scale-105 transition-transform">${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <p className="text-muted-foreground text-sm font-medium transition-colors">Cash Balance</p>
+                    <p className="text-2xl font-bold text-foreground group-hover:scale-105 transition-transform">${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                   </div>
-                  <div className="relative">
-                    <BanknotesIcon className="h-8 w-8 text-info group-hover:scale-110 transition-transform" />
-                    <div className="absolute inset-0 bg-info/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="h-12 w-12 rounded-lg bg-blue-500/10 dark:bg-blue-400/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <BanknotesIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Total Portfolio */}
-            <Card className="bg-gradient-to-br from-primary/10 via-card to-chart-1/5 border-primary/30 hover:border-primary/50 transition-all duration-300 group">
+            <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 group hover:shadow-md">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-primary text-sm font-medium group-hover:text-primary/80 transition-colors">Total Portfolio</p>
-                    <p className="text-2xl font-bold text-card-foreground group-hover:scale-105 transition-transform">${totalPortfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <p className="text-muted-foreground text-sm font-medium transition-colors">Total Portfolio</p>
+                    <p className="text-2xl font-bold text-foreground group-hover:scale-105 transition-transform">${totalPortfolioValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                   </div>
-                  <div className="relative">
-                    <ArrowTrendingUpIcon className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
-                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <ArrowTrendingUpIcon className="h-6 w-6 text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -288,31 +286,38 @@ export default function PaperTradingSimulator({ className }: PaperTradingSimulat
 
             {/* Total P&L */}
             <Card className={cn(
-              "bg-gradient-to-br via-card border-2 transition-all duration-300 group hover:scale-105",
+              "bg-card border-2 transition-all duration-300 group hover:shadow-md",
               totalPnL >= 0 
-                ? "from-trading-bullish/10 to-success/5 border-trading-bullish/30 hover:border-trading-bullish/50 hover:shadow-lg hover:shadow-trading-bullish/20" 
-                : "from-trading-bearish/10 to-destructive/5 border-trading-bearish/30 hover:border-trading-bearish/50 hover:shadow-lg hover:shadow-trading-bearish/20"
+                ? "border-emerald-500/30 dark:border-emerald-400/30 hover:border-emerald-500/50 dark:hover:border-emerald-400/50" 
+                : "border-red-500/30 dark:border-red-400/30 hover:border-red-500/50 dark:hover:border-red-400/50"
             )}>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={cn("text-sm font-medium transition-colors", totalPnL >= 0 ? "text-trading-bullish group-hover:text-trading-bullish/80" : "text-trading-bearish group-hover:text-trading-bearish/80")}>Total P&L</p>
-                    <p className={cn("text-2xl font-bold transition-all duration-300 group-hover:scale-105", totalPnL >= 0 ? "text-trading-bullish" : "text-trading-bearish")}>
+                    <p className="text-muted-foreground text-sm font-medium">Total P&L</p>
+                    <p className={cn(
+                      "text-2xl font-bold transition-all duration-300 group-hover:scale-105",
+                      totalPnL >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                    )}>
                       {totalPnL >= 0 ? '+' : ''}${totalPnL.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
-                    <p className={cn("text-sm transition-colors", totalPnL >= 0 ? "text-trading-bullish group-hover:text-trading-bullish/80" : "text-trading-bearish group-hover:text-trading-bearish/80")}>
+                    <p className={cn(
+                      "text-sm font-medium",
+                      totalPnL >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                    )}>
                       {totalPnLPercent >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%
                     </p>
                   </div>
-                  <div className="relative">
+                  <div className={cn(
+                    "h-12 w-12 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform",
+                    totalPnL >= 0 
+                      ? "bg-emerald-500/10 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400" 
+                      : "bg-red-500/10 dark:bg-red-400/10 text-red-600 dark:text-red-400"
+                  )}>
                     {totalPnL >= 0 ? 
-                      <ArrowUpIcon className="h-8 w-8 text-trading-bullish group-hover:scale-110 transition-transform" /> : 
-                      <ArrowDownIcon className="h-8 w-8 text-trading-bearish group-hover:scale-110 transition-transform" />
+                      <ArrowUpIcon className="h-6 w-6" /> : 
+                      <ArrowDownIcon className="h-6 w-6" />
                     }
-                    <div className={cn(
-                      "absolute inset-0 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity",
-                      totalPnL >= 0 ? "bg-trading-bullish/20" : "bg-trading-bearish/20"
-                    )} />
                   </div>
                 </div>
               </CardContent>

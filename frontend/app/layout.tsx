@@ -7,6 +7,9 @@ import { ClerkProvider } from "@clerk/nextjs";
 
 const inter = Inter({
   subsets: ["latin"],
+  display: 'swap',
+  preload: true,
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {

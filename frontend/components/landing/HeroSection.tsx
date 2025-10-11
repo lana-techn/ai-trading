@@ -16,7 +16,7 @@ import TradingDashboard from '../trading/TradingDashboard';
 const HeroSection = memo(function HeroSection() {
   const [mounted, setMounted] = useState(false);
   const { ref, hasIntersected } = useIntersectionObserver({ threshold: 0.1 });
-  usePerformanceMonitoring('HeroSection');
+  // Removed usePerformanceMonitoring to prevent infinite re-renders
   
   // Container Scroll Animation - Safe for SSR
   const containerRef = useRef<HTMLDivElement>(null);
@@ -38,47 +38,49 @@ const HeroSection = memo(function HeroSection() {
     return { rotate, scale, translateY };
   }, [scrollProgress, scaleDimensions]);
   
-  // Throttle function for performance
-  const throttle = useCallback((func: (...args: unknown[]) => void, delay: number) => {
-    let timeoutId: NodeJS.Timeout;
-    let lastExecTime = 0;
-    return (...args: unknown[]) => {
-      const currentTime = Date.now();
-      if (currentTime - lastExecTime > delay) {
+  // Throttle function - moved outside useCallback to prevent dependency issues
+  const throttleRef = useRef<{ [key: string]: NodeJS.Timeout | number }>({});
+  
+  const throttle = useCallback(<T extends (...args: unknown[]) => void>(func: T, delay: number, key: string) => {
+    return (...args: Parameters<T>) => {
+      if (!throttleRef.current[key]) {
         func(...args);
-        lastExecTime = currentTime;
-      } else {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func(...args), delay);
+        throttleRef.current[key] = setTimeout(() => {
+          delete throttleRef.current[key];
+        }, delay) as unknown as number;
       }
     };
   }, []);
   
   // Optimized scroll handler
-  const handleScroll = useCallback(throttle(() => {
-    if (typeof window === 'undefined') return;
-    
-    const scrollTop = window.pageYOffset;
-    setScrollY(scrollTop);
-    
-    // Calculate scroll progress for container animation
-    if (containerRef.current) {
-      const containerTop = containerRef.current.offsetTop;
-      const containerHeight = containerRef.current.offsetHeight;
-      const windowHeight = window.innerHeight;
+  const handleScroll = useCallback(() => {
+    throttle(() => {
+      if (typeof window === 'undefined') return;
       
-      const elementTop = containerTop - windowHeight;
-      const elementHeight = containerHeight + windowHeight;
+      const scrollTop = window.pageYOffset;
+      setScrollY(scrollTop);
       
-      const progress = Math.min(Math.max((scrollTop - elementTop) / elementHeight, 0), 1);
-      setScrollProgress(progress);
-    }
-  }, 16), [throttle]); // ~60fps throttling
+      // Calculate scroll progress for container animation
+      if (containerRef.current) {
+        const containerTop = containerRef.current.offsetTop;
+        const containerHeight = containerRef.current.offsetHeight;
+        const windowHeight = window.innerHeight;
+        
+        const elementTop = containerTop - windowHeight;
+        const elementHeight = containerHeight + windowHeight;
+        
+        const progress = Math.min(Math.max((scrollTop - elementTop) / elementHeight, 0), 1);
+        setScrollProgress(progress);
+      }
+    }, 16, 'scroll')();
+  }, [throttle]); // ~60fps throttling
   
   // Optimized resize handler
-  const handleResize = useCallback(throttle(() => {
-    setIsMobile(window.innerWidth <= 768);
-  }, 250), [throttle]); // 4fps throttling for resize
+  const handleResize = useCallback(() => {
+    throttle(() => {
+      setIsMobile(window.innerWidth <= 768);
+    }, 250, 'resize')();
+  }, [throttle]); // 4fps throttling for resize
   
   // Event listeners setup
   useEffect(() => {
