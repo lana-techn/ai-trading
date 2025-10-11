@@ -86,7 +86,7 @@ export default function Dashboard() {
         )}
         <div className="flex items-center justify-between text-primary-foreground">
           <div>
-            <h1 className="text-2xl font-bold mb-2">Welcome to AI Trading Agent</h1>
+<h1 className="text-2xl font-bold mb-2">Welcome to NousTrade</h1>
             <p className="text-primary-foreground/90">
               Advanced hybrid AI trading analysis powered by Qwen and Gemini models
               {isDevelopmentMode && <span className="block text-sm mt-1 opacity-80">Running with mock data - Backend not connected</span>}

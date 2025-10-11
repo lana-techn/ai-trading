@@ -1,4 +1,4 @@
--- AI Trading Agent Database Schema
+-- NousTrade Database Schema
 -- Supabase SQL Schema for Image Uploads and User Data
 
 -- Enable necessary extensions

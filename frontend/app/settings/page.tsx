@@ -9,7 +9,7 @@ import {
   EyeIcon,
   EyeSlashIcon
 } from '@heroicons/react/24/outline';
-import { Card, CardContent, CardHeader, CardTitle, Button, Badge, SmoothThemeToggle as ThemeToggle } from '@/components/ui';
+import { Card, CardContent, CardHeader, CardTitle, Button, Badge, ThemeToggle } from '@/components/ui';
 
 export default function SettingsPage() {
   const [notifications, setNotifications] = useState({

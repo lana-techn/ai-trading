@@ -1,69 +1,63 @@
 "use client";
 
-import { useState, useEffect } from 'react';
 import { 
   CpuChipIcon, 
   SparklesIcon 
 } from '@heroicons/react/24/outline';
+import { useMarketData } from '@/lib/hooks/useMarketData';
+import { cn } from '@/lib/utils';
 
-// Market data
-const initialMarketData = {
-  BTC: { price: 67234, change: 2.34, color: "orange" },
-  ETH: { price: 2567, change: 1.87, color: "blue" },
-  TSLA: { price: 248.50, change: -0.45, color: "red" },
-  AAPL: { price: 175.84, change: 0.92, color: "gray" }
-};
+interface TradingDashboardProps {
+  variant?: 'default' | 'compact';
+  className?: string;
+  showHeader?: boolean;
+  showActivePositions?: boolean;
+  updateInterval?: number;
+}
 
-export default function TradingDashboard() {
-  const [marketData, setMarketData] = useState(initialMarketData);
-  const [aiAnalysis, setAiAnalysis] = useState({ sentiment: 75, confidence: 87 });
-  const [totalPnL, setTotalPnL] = useState(127000);
+export default function TradingDashboard({ 
+  variant = 'default',
+  className,
+  showHeader = true,
+  showActivePositions = false,
+  updateInterval = 3000
+}: TradingDashboardProps) {
+  const { marketData, aiAnalysis, totalPnL } = useMarketData({ updateInterval });
 
-  // Real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMarketData(prev => {
-        const newData = { ...prev };
-        Object.keys(newData).forEach(key => {
-          const fluctuation = (Math.random() - 0.5) * 0.015;
-          const marketItem = newData[key as keyof typeof newData];
-          if (marketItem) {
-            marketItem.price = Math.round((marketItem.price * (1 + fluctuation)) * 100) / 100;
-            marketItem.change = Math.round((marketItem.change + fluctuation * 100) * 100) / 100;
-          }
-        });
-        return newData;
-      });
-      
-      setAiAnalysis(prev => ({
-        sentiment: Math.max(65, Math.min(90, prev.sentiment + (Math.random() - 0.5) * 8)),
-        confidence: Math.max(75, Math.min(95, prev.confidence + (Math.random() - 0.5) * 6))
-      }));
-      
-      setTotalPnL(prev => Math.round(prev + (Math.random() - 0.4) * 800));
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const isCompact = variant === 'compact';
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-6 bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-3xl border-4 border-zinc-700 shadow-2xl">
+    <div className={cn(
+      "w-full bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-3xl shadow-2xl",
+      isCompact ? "p-4 border-2 border-zinc-700" : "max-w-6xl mx-auto p-6 border-4 border-zinc-700",
+      className
+    )}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <CpuChipIcon className="h-6 w-6 text-white" />
+      {showHeader && (
+        <div className={cn(
+          "flex items-center justify-between",
+          isCompact ? "mb-4" : "mb-6"
+        )}>
+          <div className="flex items-center space-x-3">
+            <div className={cn(
+              "bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center",
+              isCompact ? "w-8 h-8" : "w-10 h-10"
+            )}>
+              <CpuChipIcon className={cn("text-white", isCompact ? "h-5 w-5" : "h-6 w-6")} />
+            </div>
+            <div>
+              <h2 className={cn("font-bold text-white", isCompact ? "text-lg" : "text-2xl")}>
+                AI Trading Dashboard
+              </h2>
+              <p className="text-sm text-gray-400">Real-time Market Analytics</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">AI Trading Dashboard</h2>
-            <p className="text-sm text-gray-400">Real-time Market Analytics</p>
+          <div className="flex items-center space-x-2">
+            <div className={cn("bg-green-400 rounded-full animate-pulse", isCompact ? "w-2 h-2" : "w-3 h-3")}></div>
+            <span className={cn("text-green-400 font-bold", isCompact ? "text-sm" : "text-lg")}>LIVE</span>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-          <span className="text-lg text-green-400 font-bold">LIVE</span>
-        </div>
-      </div>
+      )}
 
       {/* Market Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -138,22 +132,49 @@ export default function TradingDashboard() {
       </div>
 
       {/* Performance Stats */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className={cn("grid grid-cols-3", isCompact ? "gap-3" : "gap-6")}>
         <div className="text-center p-4 bg-zinc-800/50 rounded-xl">
-          <div className="text-2xl font-bold text-white mb-1">94.7%</div>
+          <div className={cn("font-bold text-white mb-1", isCompact ? "text-xl" : "text-2xl")}>94.7%</div>
           <div className="text-sm text-gray-400">Win Rate</div>
         </div>
         <div className="text-center p-4 bg-zinc-800/50 rounded-xl">
-          <div className={`text-2xl font-bold mb-1 ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <div className={cn(
+            "font-bold mb-1",
+            isCompact ? "text-xl" : "text-2xl",
+            totalPnL >= 0 ? 'text-green-400' : 'text-red-400'
+          )}>
             {totalPnL >= 0 ? '+' : ''}${Math.round(totalPnL / 1000)}K
           </div>
           <div className="text-sm text-gray-400">Total P&L</div>
         </div>
         <div className="text-center p-4 bg-zinc-800/50 rounded-xl">
-          <div className="text-2xl font-bold text-blue-400 mb-1">0.8s</div>
+          <div className={cn("font-bold text-blue-400 mb-1", isCompact ? "text-xl" : "text-2xl")}>0.8s</div>
           <div className="text-sm text-gray-400">Exec Time</div>
         </div>
       </div>
+
+      {/* Active Positions - Optional */}
+      {showActivePositions && (
+        <div className="mt-6 space-y-2">
+          <div className="text-xs text-gray-400 font-medium uppercase tracking-wider">Active Positions</div>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between py-2 px-3 bg-zinc-800/50 rounded border border-zinc-700/30">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                <span className="text-sm text-white font-medium">BTC Long</span>
+              </div>
+              <div className="text-sm text-green-400">+{Math.abs(marketData.BTC.change).toFixed(1)}%</div>
+            </div>
+            <div className="flex items-center justify-between py-2 px-3 bg-zinc-800/50 rounded border border-zinc-700/30">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                <span className="text-sm text-white font-medium">ETH Long</span>
+              </div>
+              <div className="text-sm text-green-400">+{Math.abs(marketData.ETH.change).toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

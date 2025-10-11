@@ -1,4 +1,4 @@
-# 🤖 AI Trading Agent
+# 🤖 NousTrade
 
 Platform analisis trading bertenaga AI dengan Next.js frontend dan NestJS backend.
 

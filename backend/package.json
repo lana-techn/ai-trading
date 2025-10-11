@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "1.0.0",
   "private": true,
-  "description": "NestJS backend for Trader AI platform",
+  "description": "NestJS backend for NousTrade platform",
   "scripts": {
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",

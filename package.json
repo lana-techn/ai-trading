@@ -1,7 +1,7 @@
 {
-  "name": "ai-trading-agent",
+  "name": "noustrade",
   "version": "1.0.0",
-  "description": "AI-powered trading analysis platform with Next.js frontend and FastAPI backend",
+  "description": "NousTrade: AI-powered trading analysis platform with Next.js frontend and NestJS backend",
   "scripts": {
     "dev": "concurrently \"pnpm run backend:dev\" \"pnpm run frontend:dev\" --names \"backend,frontend\" --prefix-colors \"blue,green\"",
     "dev:frontend": "pnpm --filter frontend dev",
@@ -27,9 +27,10 @@
     "ai",
     "analysis",
     "nextjs",
-    "fastapi",
+    "nestjs",
     "gemini",
-    "trading-bot"
+    "trading-bot",
+    "noustrade"
   ],
   "author": "AI Trading Agent Team",
   "license": "MIT",

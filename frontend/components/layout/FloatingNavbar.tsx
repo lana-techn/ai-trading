@@ -21,7 +21,7 @@ import {
   BookOpenIcon,
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
-import { SmoothThemeToggle } from '@/components/ui/SmoothThemeToggle';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import AuthButton from '@/components/auth/AuthButton';
 
 // Navigation items
@@ -126,7 +126,7 @@ export default function FloatingNavbar() {
                 
                 {/* Theme Toggle */}
                 <div className="hidden sm:block">
-                  <SmoothThemeToggle variant="button" size="sm" />
+                  <ThemeToggle />
                 </div>
 
                 {/* Settings (Desktop) */}
@@ -216,7 +216,7 @@ export default function FloatingNavbar() {
                   <span className="text-sm font-medium text-muted-foreground">
                     Theme
                   </span>
-                  <SmoothThemeToggle variant="button" size="sm" />
+                  <ThemeToggle />
                 </div>
               </div>
             </div>

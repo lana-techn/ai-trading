@@ -2,186 +2,147 @@
 
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
 
-## Project Overview
+Repository overview
 
-This is an AI-powered trading analysis platform with a Next.js 15 frontend and NestJS backend, using a monorepo structure managed with pnpm workspaces.
+- Monorepo managed with pnpm workspaces: frontend (Next.js 15, React 19) and backend (NestJS 10, TypeORM). Root scripts orchestrate both services.
+- Default ports: frontend http://localhost:3000, backend http://localhost:8000.
+- Environment templates: .env.example (root), backend/.env.example, frontend/.env.local.example.
 
-## Build and Development Commands
+Common commands
 
-### Quick Start
-```bash
-# Install all dependencies (use pnpm, not npm or yarn)
+- Install dependencies
+```bash path=null start=null
 pnpm install
+```
 
-# Run both frontend and backend simultaneously
+- Run both services in dev mode
+```bash path=null start=null
 pnpm dev
 ```
 
-### Individual Services
-```bash
-# Frontend only (Next.js on port 3000)
+- Run only one side in dev mode
+```bash path=null start=null
 pnpm dev:frontend
-pnpm dev:frontend --turbo  # With turbopack for faster builds
-
-# Backend only (NestJS on port 8000)
 pnpm dev:backend
-
-# Build for production
-pnpm build               # Builds both frontend and backend
-pnpm frontend:build      # Build frontend only
-pnpm backend:build       # Build backend only
-
-# Start production builds
-pnpm start
-pnpm frontend:start
-pnpm backend:start
 ```
 
-### Testing and Code Quality
-```bash
-# Linting
-pnpm lint                # Lint both frontend and backend
+- Build for production and start
+```bash path=null start=null
+pnpm build
+pnpm start
+```
 
-# Backend testing (Jest)
-pnpm --filter backend test
-pnpm --filter backend test:watch
-pnpm --filter backend test:cov
+- Lint
+```bash path=null start=null
+# All packages
+pnpm lint
 
-# Type checking (frontend)
-pnpm --filter frontend type-check
+# Per package
+pnpm --filter frontend lint
+pnpm --filter backend lint
 
-# Format code (backend)
+# Optional: backend formatting
 pnpm --filter backend format
+```
 
-# Clean build artifacts and caches
+- Tests (backend Jest)
+```bash path=null start=null
+# All backend tests
+pnpm --filter backend test
+
+# Watch mode
+pnpm --filter backend test:watch
+
+# Single test file
+pnpm --filter backend test -- src/path/to/file.spec.ts
+
+# Single test by name/pattern
+pnpm --filter backend test -- -t "pattern"
+
+# Coverage
+pnpm --filter backend test:cov
+```
+
+- Performance analysis utilities
+```bash path=null start=null
+# Performance/build analysis (see scripts/analyze-performance.js)
+pnpm analyze
+
+# Frontend bundle analyzer
+pnpm analyze:bundle
+
+# Lighthouse (ensure frontend is running on :3000)
+pnpm lighthouse
+
+# Clean build caches
 pnpm clean
 ```
 
-## Architecture Overview
-
-### Monorepo Structure
-The project uses pnpm workspaces to manage two main packages:
-- **frontend/**: Next.js 15 application with React 19
-- **backend/**: NestJS application with TypeScript
-
-### Backend Architecture (NestJS)
-
-The backend follows NestJS modular architecture with these core modules:
-
-- **DatabaseModule** (`src/database/`): SQLite by default, configurable for PostgreSQL
-- **AnalysisModule** (`src/modules/analysis/`): Trading analysis and AI integration
-- **MarketDataModule** (`src/modules/market-data/`): Alpha Vantage integration for market data
-- **ChatModule** (`src/modules/chat/`): Chat interface with memory management
-- **WebsocketModule** (`src/modules/websocket/`): Real-time communication via Socket.IO
-- **HealthModule** (`src/modules/health/`): Health checks and monitoring
-- **AuditModule** (`src/modules/audit/`): Activity logging and auditing
-- **TutorialsModule** (`src/modules/tutorials/`): Tutorial management
-
-API endpoints are prefixed with `/api/v1` and the server runs on port 8000 by default.
-
-### Frontend Architecture (Next.js)
-
-The frontend uses Next.js 15 App Router with these main routes:
-
-- `/` - Landing page
-- `/dashboard` - Main dashboard
-- `/analysis` - Trading analysis interface
-- `/charts` - Chart visualization (using ApexCharts and Lightweight Charts)
-- `/chat` - AI chat interface
-- `/portfolio` - Portfolio management
-- `/trading` - Trading interface
-- `/settings` - User settings
-
-Key integrations:
-- **Clerk**: Authentication and user management
-- **Supabase**: Backend as a service (optional)
-- **TipTap**: Rich text editor for notes
-- **Tailwind CSS v4**: Styling with new Oxide engine
-
-## Environment Configuration
-
-Create `.env` files in both root and backend directories:
-
-### Root `.env`
-```bash
-GEMINI_API_KEY=your_gemini_api_key
-ALPHA_VANTAGE_KEY=your_alpha_vantage_key
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_anon_key
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+- Integration smoke test (requires both servers running)
+```bash path=null start=null
+./test-chat.sh
 ```
 
-### Backend `.env`
-```bash
-NODE_ENV=development
-PORT=8000
-DB_TYPE=sqlite
-DB_PATH=./data/trader-ai.sqlite
-CORS_ORIGINS=http://localhost:3000
-ALPHA_VANTAGE_API_KEY=demo
-```
+High-level architecture
 
-## Database
+- Frontend (frontend/)
+  - Next.js App Router
+    - Routes include: /, /chat, /analysis, /dashboard, /portfolio, /trading, /charts, /settings, /tutorials, /debug.
+    - app/layout.tsx wraps pages with ClerkProvider, ThemeProvider, and a shared LandingLayout.
+  - Authentication and user context via @clerk/nextjs.
+  - Data access
+    - REST client in lib/api.ts (axios) points to ${NEXT_PUBLIC_API_URL:-http://localhost:8000}/api/v1.
+    - Supabase client utilities in lib/supabase.ts and lib/supabase-db.ts for storage and RLS-backed data models (see database/schema.sql).
+    - WebSocket helpers in lib/websocket.ts for real-time updates.
+  - UI and performance
+    - Tailwind CSS configured; dynamic imports and split-chunk policies.
+    - middleware.ts sets security and cache headers and guards server action edge cases.
+    - next.config.js enables optimizePackageImports, custom splitChunks, image optimization, compression, and HTTP headers.
 
-The backend uses TypeORM with SQLite by default. The database file is stored at `backend/data/trader-ai.sqlite`.
+- Backend (backend/)
+  - NestJS app composition (src/app.module.ts)
+    - Global ConfigModule loading src/config/configuration.ts.
+    - ScheduleModule for cron/interval tasks.
+    - DatabaseModule (TypeORM) auto-detects DB type and connection from env; sets synchronize: true; autoLoadEntities: true.
+    - Feature modules imported: AiModule, AnalysisModule, MarketDataModule, ChatModule, TutorialsModule, AuditModule, HealthModule, WebsocketModule.
+    - Global CacheInterceptor (APP_INTERCEPTOR) for tiered TTL caching.
+  - Database (src/database/database.module.ts)
+    - Chooses Postgres or SQLite based on DATABASE_URL/DB_TYPE; for SQLite ensures local path exists (default ./data/trader-ai.sqlite).
+    - Postgres URL assembled from DB_HOST/DB_PORT/DB_USERNAME/DB_PASSWORD/DB_NAME when DATABASE_URL is not provided.
+  - Configuration (src/config/configuration.ts)
+    - Maps environment variables for app, database, CORS, market data, chat, and AI keys.
+  - API
+    - Frontend expects a REST API under /api/v1 (see frontend/lib/api.ts). Endpoints include health, analyze, market-data, price, symbols, chat (including image upload), and chat history.
 
-To switch to PostgreSQL:
-1. Update `backend/.env` with PostgreSQL credentials
-2. Set `DB_TYPE=postgres` and configure connection parameters
+- Data model and storage
+  - TypeORM (backend) manages entities automatically (autoLoadEntities) with DB synchronize on.
+  - Supabase schema (database/schema.sql) defines storage for image uploads, chat sessions/messages, watchlists, and portfolio holdings, with RLS policies enabled. If using Supabase, apply this schema to provision buckets, tables, and policies.
 
-## API Communication
+Environment and configuration
 
-- Backend API: `http://localhost:8000/api/v1`
-- WebSocket: Backend provides Socket.IO on the same port
-- CORS is configured to accept requests from the frontend (port 3000)
+- Root .env.example includes keys for:
+  - Gemini (GEMINI_API_KEY) and Alpha Vantage (ALPHA_VANTAGE_KEY) for AI and market data.
+  - Supabase URL/keys for frontend and service interactions.
+  - Server defaults (HOST, PORT=8000) and optional DATABASE_URL.
+- Frontend uses NEXT_PUBLIC_* variables to reach the backend (NEXT_PUBLIC_API_URL default: http://localhost:8000).
+- CORS defaults allow http://localhost:3000 (configurable via CORS_ORIGINS).
 
-## Key Dependencies
+Performance profile (important parts)
 
-### Backend
-- NestJS v10.4.4 with Express
-- TypeORM v0.3.20 for database ORM
-- Socket.IO v4.8.1 for WebSockets
-- Alpha Vantage for market data
-- Class Validator/Transformer for DTOs
+- Frontend
+  - Code splitting and dynamic imports, compression, image optimization (WebP/AVIF), long-term caching for static assets, no-store for API routes.
+  - Bundle analysis via ANALYZE=true builds and pnpm analyze:bundle.
+- Backend
+  - Global compression and security headers (helmet), cache interceptor with per-route TTL strategies, graceful shutdown.
+- Useful scripts: pnpm analyze, pnpm build:prod, pnpm lighthouse, pnpm clean.
 
-### Frontend
-- Next.js v15.5.3 with React v19.1.0
-- Clerk for authentication
-- Lightweight Charts v4.2.0 for financial charts
-- ApexCharts v5.3.5 for general charts
-- TipTap v3.5.1 for rich text editing
-- Tailwind CSS v4 with PostCSS
+Notes and quirks for this repo
 
-## Development Tips
+- README Quick Start and workspace scripts are generally accurate. However:
+  - The README mentions db:migrate/db:seed scripts; these are not defined in backend/package.json. Database schema is managed by TypeORM synchronize for the Nest app; Supabase objects are defined in database/schema.sql.
+  - The root package.json description references a “FastAPI backend”; the actual backend is NestJS.
+- Frontend axios client (lib/api.ts) assumes backend base URL is ${NEXT_PUBLIC_API_URL:-http://localhost:8000} with versioned prefix /api/v1.
 
-1. **Package Management**: Always use `pnpm` commands, not npm or yarn
-2. **Module Imports**: Use workspace protocol for cross-package dependencies
-3. **API Calls**: Frontend should call backend at `http://localhost:8000/api/v1`
-4. **WebSocket**: Connect to `ws://localhost:8000` for real-time features
-5. **Database**: SQLite database is created automatically on first run
-6. **TypeScript**: Both frontend and backend use strict TypeScript configurations
+Version control workflow (from README highlights)
 
-## Common Development Tasks
-
-### Adding a new API endpoint
-1. Create controller, service, and module files in `backend/src/modules/[module-name]/`
-2. Import the module in `backend/src/app.module.ts`
-3. Define DTOs with class-validator decorators
-4. Endpoints automatically get `/api/v1` prefix
-
-### Adding a new frontend page
-1. Create a new directory under `frontend/app/[page-name]/`
-2. Add `page.tsx` for the page component
-3. Optionally add `layout.tsx` for nested layouts
-4. Use `route.ts` for API route handlers
-
-### Running a single backend test
-```bash
-pnpm --filter backend test -- path/to/test.spec.ts
-```
-
-### Debugging
-- Frontend: Use Chrome DevTools with Next.js debug mode
-- Backend: NestJS runs with `--watch` flag in development for hot reload
-- Check `backend/dist/` for compiled output if build issues occur
+- Branches: main (prod), development (staging), backend-dev, frontend-dev. Merge backend-dev and frontend-dev into development for integration; then to main for releases.

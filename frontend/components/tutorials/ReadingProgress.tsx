@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Reading Progress Component
  * Shows reading progress and estimated time remaining

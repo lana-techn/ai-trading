@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🧪 AI Trading Agent - Chat Functionality Test${NC}"
+echo -e "${BLUE}🧪 NousTrade - Chat Functionality Test${NC}"
 echo "=============================================="
 
 # Function to test API endpoint

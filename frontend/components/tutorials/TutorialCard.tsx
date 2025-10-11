@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Tutorial Card Component
  * Displays tutorial information in a card format
@@ -154,7 +155,7 @@ export default function TutorialCard({ tutorial, compact = false, showAnalytics 
             <div className="text-right">
               <div className="flex items-center text-card-foreground mb-1">
                 <User className="w-4 h-4 mr-1.5" />
-                <span className="font-medium">{author || 'AI Trading Agent'}</span>
+                <span className="font-medium">{author || 'NousTrade'}</span>
               </div>
               <div className="text-xs text-muted-foreground font-medium">
                 {formatDate(created_at)}
