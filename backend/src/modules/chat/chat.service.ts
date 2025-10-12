@@ -67,6 +67,10 @@ export class ChatService {
       context: systemContext,
     });
 
+    if (!aiResponse.success) {
+      this.logger.error(`AI Response failed: ${aiResponse.error}`);
+    }
+
     const assistantMessage = aiResponse.success
       ? aiResponse.response
       : this.composeResponse(message, marketContext, symbol);

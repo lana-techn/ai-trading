@@ -1,12 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ILike, IsNull, Not, Repository } from 'typeorm';
 
-import { TutorialAnalytics } from './entities/tutorial-analytics.entity';
-import { TutorialSection } from './entities/tutorial-section.entity';
-import { TutorialTag } from './entities/tutorial-tag.entity';
-import { Tutorial } from './entities/tutorial.entity';
+import { SupabaseService } from '../supabase/supabase.service';
 
 export interface TutorialSummary {
   id: string;
@@ -25,59 +20,29 @@ export interface TutorialSummary {
 
 @Injectable()
 export class TutorialsService {
-  constructor(
-    @InjectRepository(Tutorial) private readonly tutorialRepo: Repository<Tutorial>,
-    @InjectRepository(TutorialSection) private readonly sectionRepo: Repository<TutorialSection>,
-    @InjectRepository(TutorialTag) private readonly tagRepo: Repository<TutorialTag>,
-    @InjectRepository(TutorialAnalytics)
-    private readonly analyticsRepo: Repository<TutorialAnalytics>,
-  ) {}
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   async getAllTutorials(category?: string): Promise<TutorialSummary[]> {
-    const qb = this.tutorialRepo
-      .createQueryBuilder('tutorial')
-      .leftJoinAndSelect('tutorial.tags', 'tag')
-      .loadRelationCountAndMap('tutorial.sectionCount', 'tutorial.sections', 'visibleSections', qb =>
-        qb.where('visibleSections.isVisible = :visible', { visible: true }),
-      )
-      .where('tutorial.status = :status', { status: 'published' })
-      .orderBy('tutorial.orderIndex', 'ASC')
-      .addOrderBy('tutorial.createdAt', 'DESC');
-
-    if (category) {
-      qb.andWhere('tutorial.category = :category', { category });
-    }
-
-    const tutorials = await qb.getMany();
+    const tutorials = await this.supabaseService.getTutorials(category);
+    
     return tutorials.map(tutorial => ({
       id: tutorial.id,
       title: tutorial.title,
       slug: tutorial.slug,
       description: tutorial.description,
       category: tutorial.category,
-      difficultyLevel: tutorial.difficultyLevel,
-      estimatedReadTime: tutorial.estimatedReadTime,
+      difficultyLevel: tutorial.difficulty_level,
+      estimatedReadTime: tutorial.estimated_read_time,
       status: tutorial.status,
-      orderIndex: tutorial.orderIndex,
-      publishedAt: tutorial.publishedAt,
-      sectionCount: (tutorial as Tutorial & { sectionCount?: number }).sectionCount ?? 0,
-      tags: tutorial.tags?.map(tag => ({ id: tag.id, name: tag.name, color: tag.color })) ?? [],
+      orderIndex: tutorial.order_index,
+      publishedAt: tutorial.published_at,
+      sectionCount: tutorial.sections?.length ?? 0,
+      tags: tutorial.tutorial_tag_relations?.map((relation: any) => relation.tutorial_tags) ?? [],
     }));
   }
 
   async getTutorialBySlug(slug: string) {
-    const tutorial = await this.tutorialRepo.findOne({
-      where: { slug, status: 'published' },
-      relations: {
-        sections: true,
-        tags: true,
-      },
-      order: {
-        sections: {
-          orderIndex: 'ASC',
-        },
-      },
-    });
+    const tutorial = await this.supabaseService.getTutorialBySlug(slug);
 
     if (!tutorial) {
       return null;
@@ -88,25 +53,14 @@ export class TutorialsService {
     return {
       ...tutorial,
       sections: tutorial.sections
-        ?.filter(section => section.isVisible)
-        .sort((a, b) => a.orderIndex - b.orderIndex),
-      tags: tutorial.tags?.map(tag => ({ id: tag.id, name: tag.name, color: tag.color })) ?? [],
+        ?.filter((section: any) => section.is_visible)
+        .sort((a: any, b: any) => a.order_index - b.order_index),
+      tags: tutorial.tutorial_tag_relations?.map((relation: any) => relation.tutorial_tags) ?? [],
     };
   }
 
   async getSection(tutorialSlug: string, sectionSlug: string) {
-    const section = await this.sectionRepo.findOne({
-      where: {
-        slug: sectionSlug,
-        tutorial: {
-          slug: tutorialSlug,
-          status: 'published',
-        },
-      },
-      relations: {
-        tutorial: true,
-      },
-    });
+    const section = await this.supabaseService.getSection(tutorialSlug, sectionSlug);
 
     if (!section) {
       return null;
@@ -121,162 +75,77 @@ export class TutorialsService {
       return [];
     }
 
-    const searchTerm = `%${query.trim()}%`;
-    const tutorials = await this.tutorialRepo.find({
-      where: [
-        { status: 'published', title: ILike(searchTerm) },
-        { status: 'published', description: ILike(searchTerm) },
-        { status: 'published', category: ILike(searchTerm) },
-      ],
-      relations: { tags: true },
-    });
-
-    const unique = new Map<string, TutorialSummary>();
-    tutorials.forEach(tutorial => {
-      unique.set(tutorial.id, {
-        id: tutorial.id,
-        title: tutorial.title,
-        slug: tutorial.slug,
-        description: tutorial.description,
-        category: tutorial.category,
-        difficultyLevel: tutorial.difficultyLevel,
-        estimatedReadTime: tutorial.estimatedReadTime,
-        status: tutorial.status,
-        orderIndex: tutorial.orderIndex,
-        publishedAt: tutorial.publishedAt,
-        sectionCount: tutorial.sections?.length ?? 0,
-        tags: tutorial.tags?.map(tag => ({ id: tag.id, name: tag.name, color: tag.color })) ?? [],
-      });
-    });
-
-    const sections = await this.sectionRepo.find({
-      where: { content: ILike(searchTerm), isVisible: true },
-      relations: { tutorial: { tags: true } },
-    });
-
-    sections.forEach(section => {
-      const tutorial = section.tutorial;
-      if (!tutorial || tutorial.status !== 'published') return;
-      if (!unique.has(tutorial.id)) {
-        unique.set(tutorial.id, {
-          id: tutorial.id,
-          title: tutorial.title,
-          slug: tutorial.slug,
-          description: tutorial.description,
-          category: tutorial.category,
-          difficultyLevel: tutorial.difficultyLevel,
-          estimatedReadTime: tutorial.estimatedReadTime,
-          status: tutorial.status,
-          orderIndex: tutorial.orderIndex,
-          publishedAt: tutorial.publishedAt,
-          sectionCount: tutorial.sections?.length ?? 0,
-          tags: tutorial.tags?.map(tag => ({ id: tag.id, name: tag.name, color: tag.color })) ?? [],
-        });
-      }
-    });
-
-    return Array.from(unique.values());
+    const tutorials = await this.supabaseService.searchTutorials(query);
+    
+    return tutorials.map(tutorial => ({
+      id: tutorial.id,
+      title: tutorial.title,
+      slug: tutorial.slug,
+      description: tutorial.description,
+      category: tutorial.category,
+      difficultyLevel: tutorial.difficulty_level,
+      estimatedReadTime: tutorial.estimated_read_time,
+      status: tutorial.status,
+      orderIndex: tutorial.order_index,
+      publishedAt: tutorial.published_at,
+      sectionCount: tutorial.sections?.length ?? 0,
+      tags: tutorial.tutorial_tag_relations?.map((relation: any) => relation.tutorial_tags) ?? [],
+    }));
   }
 
   async getCategories(): Promise<{ name: string; count: number }[]> {
-    const tutorials = await this.tutorialRepo.find({
-      where: { status: 'published' },
-      select: ['category'],
-    });
-
-    const counts = new Map<string, number>();
-    tutorials.forEach(tutorial => {
-      counts.set(tutorial.category, (counts.get(tutorial.category) ?? 0) + 1);
-    });
-
-    return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+    return this.supabaseService.getCategories();
   }
 
   async getTags() {
-    const tags = await this.tagRepo.find();
-    return tags.map(tag => ({ id: tag.id, name: tag.name, color: tag.color }));
+    return this.supabaseService.getTags();
   }
 
   async getRelatedTutorials(tutorialId: string, limit = 3) {
-    const tutorial = await this.tutorialRepo.findOne({ where: { id: tutorialId } });
-    if (!tutorial) {
-      return [];
-    }
-
-    const qb = this.tutorialRepo
-      .createQueryBuilder('tutorial')
-      .leftJoinAndSelect('tutorial.tags', 'tag')
-      .where('tutorial.status = :status', { status: 'published' })
-      .andWhere('tutorial.category = :category', { category: tutorial.category })
-      .andWhere('tutorial.id != :id', { id: tutorialId })
-      .orderBy('tutorial.publishedAt', 'DESC')
-      .limit(limit);
-
-    const related = await qb.getMany();
+    const related = await this.supabaseService.getRelatedTutorials(tutorialId, limit);
     return related.map(item => ({
       id: item.id,
       title: item.title,
       slug: item.slug,
       description: item.description,
       category: item.category,
-      difficultyLevel: item.difficultyLevel,
-      estimatedReadTime: item.estimatedReadTime,
+      difficultyLevel: item.difficulty_level,
+      estimatedReadTime: item.estimated_read_time,
       status: item.status,
-      orderIndex: item.orderIndex,
-      publishedAt: item.publishedAt,
-      tags: item.tags?.map(tag => ({ id: tag.id, name: tag.name, color: tag.color })) ?? [],
+      orderIndex: item.order_index,
+      publishedAt: item.published_at,
+      tags: item.tutorial_tag_relations?.map((relation: any) => relation.tutorial_tags) ?? [],
     }));
   }
 
   async getTutorialAnalytics(tutorialId: string) {
-    return this.analyticsRepo.findOne({
-      where: {
-        tutorial: { id: tutorialId },
-        section: IsNull(),
-      },
-    });
+    return this.supabaseService.getTutorialAnalytics(tutorialId);
   }
 
   private async incrementViewCount(tutorialId: string, sectionId: string | null) {
-    let record = await this.analyticsRepo.findOne({
-      where: {
-        tutorial: { id: tutorialId },
-        section: sectionId ? { id: sectionId } : IsNull(),
-      },
-      relations: {
-        tutorial: true,
-        section: true,
-      },
-    });
-
-    if (!record) {
-      record = this.analyticsRepo.create({
-        tutorial: { id: tutorialId } as Tutorial,
-        section: sectionId ? ({ id: sectionId } as TutorialSection) : null,
-        viewCount: 1,
-        uniqueVisitors: 1,
-        lastViewedAt: new Date(),
-      });
-    } else {
-      record.viewCount += 1;
-      record.lastViewedAt = new Date();
-    }
-
-    await this.analyticsRepo.save(record);
+    return this.supabaseService.incrementViewCount(tutorialId, sectionId);
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async decayBounceRates() {
-    const analytics = await this.analyticsRepo.find({ where: { bounceRate: Not(IsNull()) } });
-    if (!analytics.length) return;
+    const supabase = this.supabaseService.getClient();
+    const { data: analytics, error } = await supabase
+      .from('tutorial_analytics')
+      .select('*')
+      .not('bounce_rate', 'is', null);
+    
+    if (error || !analytics.length) return;
 
     const now = new Date();
     for (const record of analytics) {
-      // simple decay to slowly normalise bounce rate over time
-      record.bounceRate = Math.max(0, Number(record.bounceRate) * 0.98);
-      record.lastViewedAt = record.lastViewedAt ?? now;
+      const decayedBounceRate = Math.max(0, Number(record.bounce_rate) * 0.98);
+      await supabase
+        .from('tutorial_analytics')
+        .update({
+          bounce_rate: decayedBounceRate,
+          last_viewed_at: record.last_viewed_at ?? now.toISOString()
+        })
+        .eq('id', record.id);
     }
-
-    await this.analyticsRepo.save(analytics);
   }
 }

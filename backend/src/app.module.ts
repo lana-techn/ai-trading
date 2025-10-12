@@ -13,9 +13,10 @@ import { AnalysisModule } from './modules/analysis/analysis.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { HealthModule } from './modules/health/health.module';
 import { MarketDataModule } from './modules/market-data/market-data.module';
+import { SupabaseModule } from './modules/supabase/supabase.module';
 import { TutorialsModule } from './modules/tutorials/tutorials.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
-import { DatabaseModule } from './database/database.module';
+
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { DatabaseModule } from './database/database.module';
       load: [configuration],
     }),
     ScheduleModule.forRoot(),
-    DatabaseModule,
+    SupabaseModule,
     AiModule,
     HealthModule,
     AnalysisModule,

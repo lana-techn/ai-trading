@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tutorial Card Component
  * Displays tutorial information in a card format
@@ -6,6 +5,7 @@
 
 import Link from 'next/link';
 import { Clock, BookOpen, Tag, User, Eye } from 'lucide-react';
+import { Tutorial, TutorialAnalytics } from '@/lib/api/tutorials';
 
 const difficultyColors = {
   beginner: 'bg-success/10 text-success border-success/20 dark:bg-success/20 dark:text-success dark:border-success/30',
@@ -21,7 +21,13 @@ const categoryColors = {
   'Resources': 'bg-chart-6'
 };
 
-export default function TutorialCard({ tutorial, compact = false, showAnalytics = false }) {
+interface TutorialCardProps {
+  tutorial: Tutorial & { analytics?: TutorialAnalytics };
+  compact?: boolean;
+  showAnalytics?: boolean;
+}
+
+export default function TutorialCard({ tutorial, compact = false, showAnalytics = false }: TutorialCardProps) {
   const {
     title,
     slug,

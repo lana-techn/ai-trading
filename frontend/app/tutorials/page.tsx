@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tutorials Page - Main tutorials listing
  * Shows all tutorials with filtering and search capabilities
@@ -8,18 +7,18 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Search, Filter, BookOpen, TrendingUp } from 'lucide-react';
-import tutorialAPI from '@/lib/api/tutorials';
+import tutorialAPI, { Tutorial, TutorialCategory } from '@/lib/api/tutorials';
 import TutorialCard from '@/components/tutorials/TutorialCard';
 
 export default function TutorialsPage() {
-  const [tutorials, setTutorials] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [tutorials, setTutorials] = useState<Tutorial[]>([]);
+  const [categories, setCategories] = useState<TutorialCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('');
-  const [sortBy, setSortBy] = useState('order');
-  const [error, setError] = useState(null);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<'' | 'beginner' | 'intermediate' | 'advanced'>('');
+  const [sortBy, setSortBy] = useState<'order' | 'title' | 'difficulty' | 'read_time' | 'sections'>('order');
+  const [error, setError] = useState<string | null>(null);
 
   // Load tutorials and categories
   useEffect(() => {
@@ -33,8 +32,9 @@ export default function TutorialsPage() {
           tutorialAPI.getCategories()
         ]);
         
-        setTutorials(tutorialsData);
-        setCategories(categoriesData);
+        // Ensure we always set arrays
+        setTutorials(Array.isArray(tutorialsData) ? tutorialsData : []);
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       } catch (err) {
         setError('Failed to load tutorials. Please try again later.');
         console.error('Error loading tutorials:', err);
@@ -48,6 +48,12 @@ export default function TutorialsPage() {
 
   // Filter and sort tutorials
   const filteredTutorials = useMemo(() => {
+    // Ensure tutorials is always an array
+    if (!Array.isArray(tutorials)) {
+      console.warn('tutorials is not an array:', tutorials);
+      return [];
+    }
+    
     let filtered = [...tutorials];
 
     // Filter by search query

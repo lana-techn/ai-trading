@@ -25,7 +25,8 @@ export class GeminiService {
       this.logger.warn('Gemini API key not configured');
     }
     this.genAI = new GoogleGenerativeAI(apiKey || '');
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-pro-latest' });
+    // Using gemini-2.0-flash which is available and fast
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
   }
 
   async chat(
@@ -34,6 +35,8 @@ export class GeminiService {
     systemContext?: string,
   ): Promise<GeminiChatResponse> {
     try {
+      this.logger.debug(`Starting Gemini chat with message: ${message.substring(0, 50)}...`);
+      
       const chat = this.model.startChat({
         history: conversationHistory.map(msg => ({
           role: msg.role,
@@ -49,12 +52,18 @@ export class GeminiService {
       const result = await chat.sendMessage(prompt);
       const response = result.response.text();
 
+      this.logger.debug(`Gemini response received: ${response.substring(0, 100)}...`);
+
       return {
         success: true,
         response,
       };
     } catch (error) {
       this.logger.error('Gemini chat error:', error);
+      this.logger.error('Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+      });
       return {
         success: false,
         response: '',

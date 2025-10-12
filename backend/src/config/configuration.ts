@@ -5,16 +5,10 @@ name: process.env.APP_NAME ?? 'NousTrade Backend',
     env: process.env.NODE_ENV ?? 'development',
     version: process.env.APP_VERSION ?? '1.0.0',
   },
-  database: {
-    url: process.env.DATABASE_URL ?? '',
-    type: (process.env.DB_TYPE ?? '').toLowerCase(),
-    host: process.env.DB_HOST ?? 'localhost',
-    port: parseInt(process.env.DB_PORT ?? '5432', 10),
-    username: process.env.DB_USERNAME ?? 'postgres',
-    password: process.env.DB_PASSWORD ?? '',
-    name: process.env.DB_NAME ?? 'trader_ai',
-    path: process.env.DB_PATH ?? './data/trader-ai.sqlite',
-    logging: (process.env.DB_LOGGING ?? 'false').toLowerCase() === 'true',
+  supabase: {
+    url: process.env.SUPABASE_URL ?? '',
+    anonKey: process.env.SUPABASE_ANON_KEY ?? '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
   },
   cors: {
     origins: (process.env.CORS_ORIGINS ?? 'http://localhost:3000')

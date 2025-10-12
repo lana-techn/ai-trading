@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { AiDecision } from './entities/ai-decision.entity';
+import { SupabaseModule } from '../supabase/supabase.module';
 import { AuditService } from './audit.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AiDecision])],
+  imports: [SupabaseModule],
   providers: [AuditService],
   exports: [AuditService],
 })
