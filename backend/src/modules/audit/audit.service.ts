@@ -1,8 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 
-import { AiDecision } from './entities/ai-decision.entity';
+import { SupabaseService } from '../supabase/supabase.service';
 
 export interface AiDecisionLog {
   symbol: string;
@@ -18,29 +16,49 @@ export interface AiDecisionLog {
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
-  constructor(@InjectRepository(AiDecision) private readonly decisionRepo: Repository<AiDecision>) {}
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   async logAiDecision(entry: AiDecisionLog): Promise<void> {
-    const record = this.decisionRepo.create({
+    const supabase = this.supabaseService.getClient();
+    
+    const record = {
       symbol: entry.symbol,
       action: entry.action,
       confidence: entry.confidence,
-      riskLevel: entry.riskLevel,
-      modelsUsed: entry.modelsUsed ?? null,
-      executionTimeMs: entry.executionTimeMs ?? 0,
+      risk_level: entry.riskLevel,
+      models_used: entry.modelsUsed ?? null,
+      execution_time_ms: entry.executionTimeMs ?? 0,
       metadata: entry.metadata ?? null,
-    });
+    };
 
-    await this.decisionRepo.save(record);
+    const { error } = await supabase
+      .from('ai_decisions')
+      .insert(record);
+
+    if (error) {
+      this.logger.error(`Failed to log decision: ${error.message}`);
+      throw error;
+    }
+
     this.logger.log(
       `Decision logged for ${entry.symbol}: ${entry.action} (${(entry.confidence * 100).toFixed(1)}% confidence)`,
     );
   }
 
-  async recentDecisions(limit = 20): Promise<AiDecision[]> {
-    return this.decisionRepo.find({
-      order: { createdAt: 'DESC' },
-      take: limit,
-    });
+  async recentDecisions(limit = 20): Promise<any[]> {
+    const supabase = this.supabaseService.getClient();
+    
+    const { data, error } = await supabase
+      .from('ai_decisions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      this.logger.error(`Failed to fetch recent decisions: ${error.message}`);
+      throw error;
+    }
+
+    return data || [];
   }
 }
