@@ -1,13 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DataSource } from 'typeorm';
+import { SupabaseService } from '../supabase/supabase.service';
 import { formatISO } from 'date-fns';
 
 @Injectable()
 export class HealthService {
   private readonly logger = new Logger(HealthService.name);
 
-  constructor(private readonly configService: ConfigService, private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
   async getHealthStatus() {
     const version = this.configService.get('app.version', '1.0.0');
@@ -29,7 +32,13 @@ export class HealthService {
 
   private async checkDatabase(): Promise<'healthy' | 'degraded'> {
     try {
-      await this.dataSource.query('SELECT 1');
+      const supabase = this.supabaseService.getClient();
+      const { error } = await supabase.from('tutorials').select('id').limit(1);
+      
+      if (error) {
+        throw error;
+      }
+      
       return 'healthy';
     } catch (error) {
       this.logger.warn(`Database health check failed: ${(error as Error).message}`);
