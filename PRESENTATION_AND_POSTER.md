@@ -7,9 +7,9 @@ Dokumen ini berisi:
 
 Sumber materi diambil dari kode dan dokumentasi dalam repo ini: Next.js (frontend), NestJS (backend), skema database Supabase, serta README dan catatan performa.
 
-====================================================
+
 A. Outline PPT (Slide-by-Slide)
-====================================================
+
 
 Slide 1 — Judul & Tagline
 - Judul: NousTrade — Hybrid Intelligence Platform
@@ -159,9 +159,8 @@ Tambahan: Versi Singkat (8 Slide) — Jika durasi presentasi ketat
 7) Kebaruan & Rencana Lanjut
 8) Penutup & Call-to-Action
 
-====================================================
-B. Naskah Konten Poster (Siap Pakai)
-====================================================
+
+B. Naskah Konten Poster
 
 Judul Besar
 NousTrade — Hybrid Intelligence Platform
@@ -236,9 +235,9 @@ Kontak / QR Code
 - [Email / Media Sosial]
 - [QR ke repo/demo]
 
-====================================================
+
 C. Lampiran: Ringkasan Perintah Penting
-====================================================
+
 
 Pengembangan
 - Install: pnpm install
@@ -270,9 +269,9 @@ Analisis Performa
 Demo Integrasi
 - ./test-chat.sh
 
-====================================================
+
 D. Referensi Teknis (Singkat)
-====================================================
+
 
 Endpoint utama (dipakai oleh frontend/lib/api.ts)
 - GET /api/v1/health
