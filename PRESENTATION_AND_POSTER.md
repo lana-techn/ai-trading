@@ -2,9 +2,6 @@
 
 Platform analisis trading bertenaga AI dengan antarmuka chat untuk crypto, forex, dan saham.
 
-====================================================
-KONTEN POSTER LOMBA
-====================================================
 
 ## ABSTRACT
 
