@@ -168,8 +168,19 @@ const TiptapReader = ({ content, title, sectionIndex, totalSections }) => {
           <div className="fallback-content space-y-4">
             {content ? (
               content.split('\n\n').map((paragraph, index) => {
-                if (paragraph.trim().startsWith('#')) {
-                  const level = (paragraph.match(/^#+/) || [''])[0].length;
+                // Safety check for undefined/null paragraph
+                if (!paragraph || typeof paragraph !== 'string') {
+                  return null;
+                }
+
+                const trimmed = paragraph.trim();
+                if (!trimmed) {
+                  return null;
+                }
+
+                if (trimmed.startsWith('#')) {
+                  const matchResult = paragraph.match(/^#+/);
+                  const level = matchResult ? matchResult[0].length : 1;
                   const text = paragraph.replace(/^#+\s*\*?\*?/, '').replace(/\*?\*?$/, '');
                   const HeaderTag = `h${Math.min(level + 1, 6)}`;
                   return (
@@ -182,10 +193,10 @@ const TiptapReader = ({ content, title, sectionIndex, totalSections }) => {
                       {text}
                     </HeaderTag>
                   );
-                } else if (paragraph.trim().startsWith('-') || paragraph.trim().startsWith('*')) {
+                } else if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
                   return (
                     <ul key={index} className="space-y-2 mb-4">
-                      {paragraph.split('\n').filter(line => line.trim()).map((item, itemIndex) => (
+                      {paragraph.split('\n').filter(line => line && line.trim()).map((item, itemIndex) => (
                         <li key={itemIndex} className="flex items-start">
                           <span className="text-chart-2 mr-3 mt-1">✨</span>
                           <span className="text-card-foreground leading-relaxed">
@@ -195,15 +206,14 @@ const TiptapReader = ({ content, title, sectionIndex, totalSections }) => {
                       ))}
                     </ul>
                   );
-                } else if (paragraph.trim()) {
+                } else {
                   return (
                     <p key={index} className="text-card-foreground leading-relaxed mb-4">
                       {paragraph.replace(/\*\*([^*]+)\*\*/g, '$1')}
                     </p>
                   );
                 }
-                return null;
-              })
+              }).filter(Boolean)
             ) : (
               <p className="text-muted-foreground">No content available.</p>
             )}
@@ -212,7 +222,7 @@ const TiptapReader = ({ content, title, sectionIndex, totalSections }) => {
       </div>
       
       {/* Key Concept Box (for technical analysis content) */}
-      {(content.includes('analisis teknikal') || content.includes('technical analysis')) && (
+      {(content && typeof content === 'string' && (content.includes('analisis teknikal') || content.includes('technical analysis'))) && (
         <div className="my-8 bg-gradient-to-r from-chart-5/5 to-chart-1/5 border-l-4 border-chart-5 rounded-lg p-6">
           <div className="flex items-center mb-4">
             <div className="p-2 bg-chart-5/20 rounded-lg mr-3">
