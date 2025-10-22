@@ -1,7 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import https from 'https';
 
 @Injectable()
 export class SupabaseService implements OnModuleInit {
@@ -18,18 +17,6 @@ export class SupabaseService implements OnModuleInit {
       return;
     }
 
-    // Create custom fetch with SSL handling
-    const customFetch = (url: RequestInfo | URL, options?: RequestInit) => {
-      const fetchOptions = {
-        ...options,
-        agent: new https.Agent({
-          rejectUnauthorized: true,
-          keepAlive: true,
-        }),
-      };
-      return fetch(url, fetchOptions);
-    };
-
     try {
       this.supabase = createClient(supabaseUrl, supabaseKey, {
         db: {
@@ -40,9 +27,8 @@ export class SupabaseService implements OnModuleInit {
           autoRefreshToken: false,
         },
         global: {
-          fetch: customFetch,
           headers: {
-            'x-client-info': 'supabase-js/2.x',
+            'x-client-info': 'supabase-js-node',
           },
         },
       });
