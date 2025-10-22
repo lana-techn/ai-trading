@@ -78,11 +78,11 @@ export default function ChatSidebar({ onNewChat, onSelectChat, currentChatId }: 
           </div>
           
           {chatHistory.map((chat) => (
-            <button
+            <div
               key={chat.id}
               onClick={() => { onSelectChat?.(chat.id); setIsOpen(false); }}
               className={cn(
-                "w-full group flex items-start gap-3 p-3 rounded-lg transition-all duration-200 text-left",
+                "w-full group flex items-start gap-3 p-3 rounded-lg transition-all duration-200 text-left cursor-pointer",
                 currentChatId === chat.id ? "bg-primary/10 border border-primary/20" : "hover:bg-muted border border-transparent"
               )}
             >
@@ -97,13 +97,13 @@ export default function ChatSidebar({ onNewChat, onSelectChat, currentChatId }: 
                 <div className="text-xs text-muted-foreground truncate mt-0.5">{chat.preview}</div>
                 <div className="text-xs text-muted-foreground mt-1">{chat.timestamp.toLocaleDateString()}</div>
               </div>
-              <button
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-destructive"
+              <div
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-destructive cursor-pointer"
                 onClick={(e) => { e.stopPropagation(); }}
               >
                 <TrashIcon className="h-4 w-4" />
-              </button>
-            </button>
+              </div>
+            </div>
           ))}
         </div>
 

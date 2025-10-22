@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class SupabaseService {
   private supabase: SupabaseClient;
+  private readonly logger = new Logger(SupabaseService.name);
 
   constructor(private configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
@@ -14,7 +15,16 @@ export class SupabaseService {
       throw new Error('Supabase URL and Service Role Key are required');
     }
 
-    this.supabase = createClient(supabaseUrl, supabaseKey);
+    this.supabase = createClient(supabaseUrl, supabaseKey, {
+      db: {
+        schema: 'public',
+      },
+      auth: {
+        persistSession: false,
+      },
+    });
+    
+    this.logger.log(`Supabase initialized with URL: ${supabaseUrl}`);
   }
 
   getClient(): SupabaseClient {
@@ -22,70 +32,90 @@ export class SupabaseService {
   }
 
   async getTutorials(category?: string) {
-    let query = this.supabase
-      .from('tutorials')
-      .select(`
-        *,
-        sections (id),
-        tutorial_tag_relations (
-          tutorial_tags (id, name, color)
-        )
-      `)
-      .eq('status', 'published')
-      .order('order_index', { ascending: true })
-      .order('created_at', { ascending: false });
+    try {
+      let query = this.supabase
+        .from('tutorials')
+        .select(`
+          *,
+          sections (id),
+          tutorial_tag_relations (
+            tutorial_tags (id, name, color)
+          )
+        `)
+        .eq('status', 'published')
+        .order('order_index', { ascending: true })
+        .order('created_at', { ascending: false });
 
-    if (category) {
-      query = query.eq('category', category);
+      if (category) {
+        query = query.eq('category', category);
+      }
+
+      const { data, error } = await query;
+      
+      if (error) {
+        this.logger.error(`Supabase getTutorials error: ${error.message}`, error);
+        throw error;
+      }
+
+      this.logger.debug(`Successfully fetched ${data?.length || 0} tutorials${category ? ` for category: ${category}` : ''}`);
+      return data || [];
+    } catch (error) {
+      this.logger.error(`Error in getTutorials: ${(error as Error).message}`);
+      // Return empty array instead of crashing
+      return [];
     }
-
-    const { data, error } = await query;
-    
-    if (error) {
-      throw error;
-    }
-
-    return data;
   }
 
   async getTutorialBySlug(slug: string) {
-    const { data, error } = await this.supabase
-      .from('tutorials')
-      .select(`
-        *,
-        sections (*),
-        tutorial_tag_relations (
-          tutorial_tags (id, name, color)
-        )
-      `)
-      .eq('slug', slug)
-      .eq('status', 'published')
-      .single();
+    try {
+      const { data, error } = await this.supabase
+        .from('tutorials')
+        .select(`
+          *,
+          sections (*),
+          tutorial_tag_relations (
+            tutorial_tags (id, name, color)
+          )
+        `)
+        .eq('slug', slug)
+        .eq('status', 'published')
+        .single();
 
-    if (error && error.code !== 'PGRST116') {
-      throw error;
+      if (error && error.code !== 'PGRST116') {
+        this.logger.error(`Supabase getTutorialBySlug error for slug "${slug}": ${error.message}`, error);
+        throw error;
+      }
+
+      return data || null;
+    } catch (error) {
+      this.logger.error(`Error in getTutorialBySlug for slug "${slug}": ${(error as Error).message}`);
+      return null;
     }
-
-    return data || null;
   }
 
   async getSection(tutorialSlug: string, sectionSlug: string) {
-    const { data, error } = await this.supabase
-      .from('sections')
-      .select(`
-        *,
-        tutorials (id, slug, status)
-      `)
-      .eq('slug', sectionSlug)
-      .eq('tutorials.slug', tutorialSlug)
-      .eq('tutorials.status', 'published')
-      .single();
+    try {
+      const { data, error } = await this.supabase
+        .from('sections')
+        .select(`
+          *,
+          tutorials (id, slug, status)
+        `)
+        .eq('slug', sectionSlug)
+        .eq('tutorials.slug', tutorialSlug)
+        .eq('tutorials.status', 'published')
+        .single();
 
-    if (error && error.code !== 'PGRST116') {
-      throw error;
+      if (error && error.code !== 'PGRST116') {
+        this.logger.error(`Supabase getSection error for "${tutorialSlug}/${sectionSlug}": ${error.message}`, error);
+        throw error;
+      }
+
+      return data || null;
+    } catch (error) {
+      this.logger.error(`Error in getSection for "${tutorialSlug}/${sectionSlug}": ${(error as Error).message}`);
+      return null;
     }
-
-    return data || null;
   }
 
   async searchTutorials(query: string) {
@@ -150,63 +180,89 @@ export class SupabaseService {
   }
 
   async getCategories() {
-    const { data, error } = await this.supabase
-      .from('tutorials')
-      .select('category')
-      .eq('status', 'published');
+    try {
+      const { data, error } = await this.supabase
+        .from('tutorials')
+        .select('category')
+        .eq('status', 'published');
 
-    if (error) {
-      throw error;
+      if (error) {
+        this.logger.error(`Supabase getCategories error: ${error.message}`, error);
+        throw error;
+      }
+
+      const counts: { [key: string]: number } = {};
+      data?.forEach(item => {
+        counts[item.category] = (counts[item.category] || 0) + 1;
+      });
+
+      const result = Object.entries(counts).map(([name, count]) => ({ name, count }));
+      this.logger.debug(`Successfully fetched ${result.length} categories`);
+      return result;
+    } catch (error) {
+      this.logger.error(`Error in getCategories: ${(error as Error).message}`);
+      // Return empty array instead of crashing
+      return [];
     }
-
-    const counts: { [key: string]: number } = {};
-    data.forEach(item => {
-      counts[item.category] = (counts[item.category] || 0) + 1;
-    });
-
-    return Object.entries(counts).map(([name, count]) => ({ name, count }));
   }
 
   async getTags() {
-    const { data, error } = await this.supabase
-      .from('tutorial_tags')
-      .select('*');
+    try {
+      const { data, error } = await this.supabase
+        .from('tutorial_tags')
+        .select('*');
 
-    if (error) {
-      throw error;
+      if (error) {
+        this.logger.error(`Supabase getTags error: ${error.message}`, error);
+        throw error;
+      }
+
+      this.logger.debug(`Successfully fetched ${data?.length || 0} tags`);
+      return data || [];
+    } catch (error) {
+      this.logger.error(`Error in getTags: ${(error as Error).message}`);
+      // Return empty array instead of crashing
+      return [];
     }
-
-    return data;
   }
 
   async getRelatedTutorials(tutorialId: string, limit = 3) {
-    const { data: tutorial, error: tutorialError } = await this.supabase
-      .from('tutorials')
-      .select('category')
-      .eq('id', tutorialId)
-      .single();
+    try {
+      const { data: tutorial, error: tutorialError } = await this.supabase
+        .from('tutorials')
+        .select('category')
+        .eq('id', tutorialId)
+        .single();
 
-    if (tutorialError) throw tutorialError;
+      if (tutorialError) {
+        this.logger.error(`Supabase getRelatedTutorials error fetching tutorial: ${tutorialError.message}`, tutorialError);
+        throw tutorialError;
+      }
 
-    const { data, error } = await this.supabase
-      .from('tutorials')
-      .select(`
-        *,
-        tutorial_tag_relations (
-          tutorial_tags (id, name, color)
-        )
-      `)
-      .eq('status', 'published')
-      .eq('category', tutorial.category)
-      .neq('id', tutorialId)
-      .order('published_at', { ascending: false })
-      .limit(limit);
+      const { data, error } = await this.supabase
+        .from('tutorials')
+        .select(`
+          *,
+          tutorial_tag_relations (
+            tutorial_tags (id, name, color)
+          )
+        `)
+        .eq('status', 'published')
+        .eq('category', tutorial.category)
+        .neq('id', tutorialId)
+        .order('published_at', { ascending: false })
+        .limit(limit);
 
-    if (error) {
-      throw error;
+      if (error) {
+        this.logger.error(`Supabase getRelatedTutorials error: ${error.message}`, error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      this.logger.error(`Error in getRelatedTutorials for id "${tutorialId}": ${(error as Error).message}`);
+      return [];
     }
-
-    return data;
   }
 
   async getTutorialAnalytics(tutorialId: string) {
