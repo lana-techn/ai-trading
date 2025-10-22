@@ -62,11 +62,11 @@ export class SupabaseService {
       .eq('status', 'published')
       .single();
 
-    if (error) {
+    if (error && error.code !== 'PGRST116') {
       throw error;
     }
 
-    return data;
+    return data || null;
   }
 
   async getSection(tutorialSlug: string, sectionSlug: string) {
@@ -81,11 +81,11 @@ export class SupabaseService {
       .eq('tutorials.status', 'published')
       .single();
 
-    if (error) {
+    if (error && error.code !== 'PGRST116') {
       throw error;
     }
 
-    return data;
+    return data || null;
   }
 
   async searchTutorials(query: string) {
