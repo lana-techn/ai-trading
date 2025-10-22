@@ -33,6 +33,12 @@ export class HealthService {
   private async checkDatabase(): Promise<'healthy' | 'degraded'> {
     try {
       const supabase = this.supabaseService.getClient();
+      
+      if (!supabase) {
+        this.logger.warn('Supabase client not available');
+        return 'degraded';
+      }
+      
       const { error } = await supabase.from('tutorials').select('id').limit(1);
       
       if (error) {

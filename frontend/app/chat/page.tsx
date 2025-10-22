@@ -14,6 +14,8 @@ interface Message {
   content: string;
   timestamp: string;
   isLoading?: boolean;
+  imageUrl?: string;
+  imageFile?: File;
 }
 
 export default function ChatPage() {
@@ -26,6 +28,17 @@ export default function ChatPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Cleanup object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      messages.forEach(msg => {
+        if (msg.imageUrl) {
+          URL.revokeObjectURL(msg.imageUrl);
+        }
+      });
+    };
   }, [messages]);
 
   const handleSendMessage = async (text: string) => {
@@ -98,11 +111,16 @@ export default function ChatPage() {
     setShowImageUpload(false);
 
     try {
+      // Create object URL for image preview
+      const imageUrl = URL.createObjectURL(file);
+
       const userMessage: Message = {
         id: `user_${Date.now()}`,
         type: 'user',
         content: `📊 Uploaded chart image${additionalContext ? ': ' + additionalContext : ''}`,
         timestamp: new Date().toISOString(),
+        imageUrl,
+        imageFile: file,
       };
 
       const loadingMessage: Message = {
@@ -230,6 +248,7 @@ export default function ChatPage() {
                   content={message.content}
                   timestamp={message.timestamp}
                   isLoading={message.isLoading}
+                  imageUrl={message.imageUrl}
                   onRegenerate={message.type === 'ai' && !message.isLoading ? handleRegenerate : undefined}
                 />
               ))}

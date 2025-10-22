@@ -9,10 +9,11 @@ interface ChatMessageProps {
   content: string;
   timestamp?: string;
   isLoading?: boolean;
+  imageUrl?: string;
   onRegenerate?: () => void;
 }
 
-export default function ChatMessage({ type, content, timestamp, isLoading, onRegenerate }: ChatMessageProps) {
+export default function ChatMessage({ type, content, timestamp, isLoading, imageUrl, onRegenerate }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -68,6 +69,16 @@ export default function ChatMessage({ type, content, timestamp, isLoading, onReg
           <span className="font-semibold text-sm">{type === 'ai' ? 'NousTrade AI' : 'You'}</span>
           {timestamp && <span className="text-xs text-muted-foreground">{new Date(timestamp).toLocaleTimeString()}</span>}
         </div>
+        
+        {imageUrl && (
+          <div className="mb-3">
+            <img 
+              src={imageUrl} 
+              alt="Uploaded chart" 
+              className="max-w-md w-full rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow"
+            />
+          </div>
+        )}
         
         <div className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed">
           {formatContent(content)}

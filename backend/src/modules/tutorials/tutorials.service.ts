@@ -129,6 +129,11 @@ export class TutorialsService {
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async decayBounceRates() {
     const supabase = this.supabaseService.getClient();
+    
+    if (!supabase) {
+      return;
+    }
+
     const { data: analytics, error } = await supabase
       .from('tutorial_analytics')
       .select('*')

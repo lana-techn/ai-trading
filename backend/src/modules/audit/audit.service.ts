@@ -21,6 +21,11 @@ export class AuditService {
   async logAiDecision(entry: AiDecisionLog): Promise<void> {
     const supabase = this.supabaseService.getClient();
     
+    if (!supabase) {
+      this.logger.warn('Supabase client not available - skipping audit log');
+      return;
+    }
+    
     const record = {
       symbol: entry.symbol,
       action: entry.action,
@@ -47,6 +52,11 @@ export class AuditService {
 
   async recentDecisions(limit = 20): Promise<any[]> {
     const supabase = this.supabaseService.getClient();
+    
+    if (!supabase) {
+      this.logger.warn('Supabase client not available');
+      return [];
+    }
     
     const { data, error } = await supabase
       .from('ai_decisions')

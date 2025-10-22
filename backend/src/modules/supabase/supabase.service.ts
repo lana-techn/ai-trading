@@ -1,37 +1,103 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import https from 'https';
 
 @Injectable()
-export class SupabaseService {
-  private supabase: SupabaseClient;
+export class SupabaseService implements OnModuleInit {
+  private supabase: SupabaseClient | null = null;
   private readonly logger = new Logger(SupabaseService.name);
+  private isConnected = false;
 
   constructor(private configService: ConfigService) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase URL and Service Role Key are required');
+      this.logger.warn('Supabase URL or Service Role Key not configured - running without tutorials functionality');
+      return;
     }
 
-    this.supabase = createClient(supabaseUrl, supabaseKey, {
-      db: {
-        schema: 'public',
-      },
-      auth: {
-        persistSession: false,
-      },
-    });
-    
-    this.logger.log(`Supabase initialized with URL: ${supabaseUrl}`);
+    // Create custom fetch with SSL handling
+    const customFetch = (url: RequestInfo | URL, options?: RequestInit) => {
+      const fetchOptions = {
+        ...options,
+        agent: new https.Agent({
+          rejectUnauthorized: true,
+          keepAlive: true,
+        }),
+      };
+      return fetch(url, fetchOptions);
+    };
+
+    try {
+      this.supabase = createClient(supabaseUrl, supabaseKey, {
+        db: {
+          schema: 'public',
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+        global: {
+          fetch: customFetch,
+          headers: {
+            'x-client-info': 'supabase-js/2.x',
+          },
+        },
+      });
+      
+      this.logger.log(`Supabase client created for: ${supabaseUrl}`);
+    } catch (error) {
+      this.logger.error('Failed to create Supabase client:', error);
+    }
   }
 
-  getClient(): SupabaseClient {
+  async onModuleInit() {
+    // Test connection on startup
+    await this.testConnection();
+  }
+
+  private async testConnection() {
+    if (!this.supabase) {
+      this.logger.warn('Supabase client not initialized - skipping connection test');
+      return;
+    }
+
+    try {
+      this.logger.log('Testing Supabase connection...');
+      const { error } = await this.supabase
+        .from('tutorials')
+        .select('id')
+        .limit(1);
+
+      if (error) {
+        this.logger.error(`Supabase connection test failed: ${error.message}`);
+        this.isConnected = false;
+      } else {
+        this.logger.log('✓ Supabase connection successful');
+        this.isConnected = true;
+      }
+    } catch (error) {
+      this.logger.error('Supabase connection test error:', error);
+      this.isConnected = false;
+    }
+  }
+
+  getClient(): SupabaseClient | null {
     return this.supabase;
   }
 
+  isSupabaseConnected(): boolean {
+    return this.isConnected;
+  }
+
   async getTutorials(category?: string) {
+    if (!this.supabase) {
+      this.logger.warn('Supabase client not available');
+      return [];
+    }
+
     try {
       let query = this.supabase
         .from('tutorials')
@@ -67,6 +133,11 @@ export class SupabaseService {
   }
 
   async getTutorialBySlug(slug: string) {
+    if (!this.supabase) {
+      this.logger.warn('Supabase client not available');
+      return null;
+    }
+
     try {
       const { data, error } = await this.supabase
         .from('tutorials')
@@ -94,6 +165,11 @@ export class SupabaseService {
   }
 
   async getSection(tutorialSlug: string, sectionSlug: string) {
+    if (!this.supabase) {
+      this.logger.warn('Supabase client not available');
+      return null;
+    }
+
     try {
       const { data, error } = await this.supabase
         .from('sections')
@@ -119,6 +195,11 @@ export class SupabaseService {
   }
 
   async searchTutorials(query: string) {
+    if (!this.supabase) {
+      this.logger.warn('Supabase client not available');
+      return [];
+    }
+
     const searchTerm = `%${query}%`;
     
     const { data: titleResults, error: titleError } = await this.supabase
@@ -180,6 +261,11 @@ export class SupabaseService {
   }
 
   async getCategories() {
+    if (!this.supabase) {
+      this.logger.warn('Supabase client not available');
+      return [];
+    }
+
     try {
       const { data, error } = await this.supabase
         .from('tutorials')
@@ -207,6 +293,11 @@ export class SupabaseService {
   }
 
   async getTags() {
+    if (!this.supabase) {
+      this.logger.warn('Supabase client not available');
+      return [];
+    }
+
     try {
       const { data, error } = await this.supabase
         .from('tutorial_tags')
@@ -227,6 +318,11 @@ export class SupabaseService {
   }
 
   async getRelatedTutorials(tutorialId: string, limit = 3) {
+    if (!this.supabase) {
+      this.logger.warn('Supabase client not available');
+      return [];
+    }
+
     try {
       const { data: tutorial, error: tutorialError } = await this.supabase
         .from('tutorials')
@@ -266,6 +362,11 @@ export class SupabaseService {
   }
 
   async getTutorialAnalytics(tutorialId: string) {
+    if (!this.supabase) {
+      this.logger.warn('Supabase client not available');
+      return null;
+    }
+
     const { data, error } = await this.supabase
       .from('tutorial_analytics')
       .select('*')
@@ -281,6 +382,11 @@ export class SupabaseService {
   }
 
   async incrementViewCount(tutorialId: string, sectionId: string | null) {
+    if (!this.supabase) {
+      this.logger.warn('Supabase client not available');
+      return;
+    }
+
     const existingRecord = await this.supabase
       .from('tutorial_analytics')
       .select('*')
