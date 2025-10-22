@@ -2,6 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
+  HttpStatus,
+  Logger,
   Param,
   Post,
   Query,
@@ -26,27 +29,31 @@ class ChatRequestDto {
 
 @Controller('chat')
 export class ChatController {
+  private readonly logger = new Logger(ChatController.name);
+
   constructor(private readonly chatService: ChatService) {}
 
   @Post()
   async handleChat(@Body() body: ChatRequestDto) {
-    if (!body || typeof body !== 'object') {
-      return {
-        success: false,
-        error: 'Invalid request body',
-      };
-    }
-    
-    const message = body.message?.trim();
-    if (!message) {
-      return {
-        success: false,
-        error: 'Message is required',
-      };
-    }
+    try {
+      if (!body || typeof body !== 'object') {
+        throw new HttpException('Invalid request body', HttpStatus.BAD_REQUEST);
+      }
+      
+      const message = body.message?.trim();
+      if (!message) {
+        throw new HttpException('Message is required', HttpStatus.BAD_REQUEST);
+      }
 
-    const sessionId = body.session_id ?? 'default';
-    return this.chatService.processMessage(message, sessionId);
+      const sessionId = body.session_id ?? 'default';
+      return await this.chatService.processMessage(message, sessionId);
+    } catch (error) {
+      this.logger.error('Error processing chat message:', error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException('Failed to process message', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   @Post('upload-image')
@@ -56,18 +63,23 @@ export class ChatController {
     @Body('session_id') sessionId = 'default',
     @Body('additional_context') additionalContext = '',
   ) {
-    if (!file) {
-      return {
-        success: false,
-        error: 'File is required',
-      };
-    }
+    try {
+      if (!file) {
+        throw new HttpException('File is required', HttpStatus.BAD_REQUEST);
+      }
 
-    const analysis = await this.chatService.analyzeImage(file.originalname ?? 'chart.png', additionalContext);
-    return {
-      ...analysis,
-      session_id: sessionId,
-    };
+      const analysis = await this.chatService.analyzeImage(file.originalname ?? 'chart.png', additionalContext);
+      return {
+        ...analysis,
+        session_id: sessionId,
+      };
+    } catch (error) {
+      this.logger.error('Error analyzing image:', error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException('Failed to analyze image', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   @Get('history/:sessionId')
@@ -80,12 +92,17 @@ export class ChatController {
     messages: ChatMessage[];
     total_count: number;
   }> {
-    const parsedLimit = Math.min(Number(limit) || 50, 100);
-    return {
-      success: true,
-      session_id: sessionId,
-      messages: this.chatService.getHistory(sessionId, parsedLimit),
-      total_count: parsedLimit,
-    };
+    try {
+      const parsedLimit = Math.min(Number(limit) || 50, 100);
+      return {
+        success: true,
+        session_id: sessionId,
+        messages: this.chatService.getHistory(sessionId, parsedLimit),
+        total_count: parsedLimit,
+      };
+    } catch (error) {
+      this.logger.error('Error fetching chat history:', error);
+      throw new HttpException('Failed to fetch chat history', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatMessage from '@/components/chat/ChatMessage';
 import ChatInput from '@/components/chat/ChatInput';
+import ImageUpload from '@/components/chat/ImageUpload';
 import { tradingApi, handleApiError } from '@/lib/api';
-import { SparklesIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface Message {
   id: string;
@@ -18,6 +19,8 @@ interface Message {
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -90,11 +93,98 @@ export default function ChatPage() {
     await handleSendMessage(lastUserMessage.content);
   };
 
+  const handleImageUpload = async (file: File, additionalContext?: string) => {
+    setIsUploadingImage(true);
+    setShowImageUpload(false);
+
+    try {
+      const userMessage: Message = {
+        id: `user_${Date.now()}`,
+        type: 'user',
+        content: `📊 Uploaded chart image${additionalContext ? ': ' + additionalContext : ''}`,
+        timestamp: new Date().toISOString(),
+      };
+
+      const loadingMessage: Message = {
+        id: `ai_${Date.now()}`,
+        type: 'ai',
+        content: 'Analyzing your chart...',
+        timestamp: new Date().toISOString(),
+        isLoading: true,
+      };
+
+      setMessages(prev => [...prev, userMessage, loadingMessage]);
+      setIsLoading(true);
+
+      const response = await tradingApi.uploadAndAnalyzeImage({
+        file,
+        session_id: sessionId,
+        additional_context: additionalContext,
+      });
+
+      if (response.success) {
+        setMessages(prev => {
+          const filtered = prev.filter(msg => !msg.isLoading);
+          const analysisMessage: Message = {
+            id: `ai_${Date.now()}`,
+            type: 'ai',
+            content: response.response,
+            timestamp: new Date().toISOString(),
+          };
+          return [...filtered, analysisMessage];
+        });
+      } else {
+        throw new Error(response.error || 'Failed to analyze image');
+      }
+    } catch (err) {
+      const apiError = handleApiError(err);
+      
+      setMessages(prev => {
+        const filtered = prev.filter(msg => !msg.isLoading);
+        const errorMessage: Message = {
+          id: `ai_${Date.now()}`,
+          type: 'ai',
+          content: `## Image Analysis Failed\n\nI encountered an error while analyzing your chart. ${apiError.message}\n\n**What you can try:**\n• Ensure the image is clear and contains a trading chart\n• Try uploading a different image\n• Check your internet connection`,
+          timestamp: new Date().toISOString(),
+        };
+        return [...filtered, errorMessage];
+      });
+    } finally {
+      setIsUploadingImage(false);
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 top-[80px] flex bg-background">
       <ChatSidebar onNewChat={handleNewChat} currentChatId="current" />
       
       <div className="flex-1 flex flex-col relative">
+        {/* Image Upload Modal */}
+        {showImageUpload && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-background rounded-lg shadow-lg max-w-2xl w-full max-h-[80vh] overflow-auto">
+              <div className="sticky top-0 flex items-center justify-between p-4 border-b border-border bg-background">
+                <h2 className="text-lg font-semibold text-foreground">Analyze Chart</h2>
+                <button
+                  onClick={() => setShowImageUpload(false)}
+                  disabled={isUploadingImage}
+                  className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-4">
+                <ImageUpload
+                  onImageUpload={handleImageUpload}
+                  isUploading={isUploadingImage}
+                  enableSupabaseUpload={false}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full px-4">
@@ -149,7 +239,13 @@ export default function ChatPage() {
         </div>
 
         <div className="flex-shrink-0 border-t border-border bg-background">
-          <ChatInput onSend={handleSendMessage} onStop={() => {}} onImageUpload={() => {}} isLoading={isLoading} />
+          <ChatInput 
+            onSend={handleSendMessage} 
+            onStop={() => {}} 
+            onImageUpload={() => setShowImageUpload(true)} 
+            isLoading={isLoading || isUploadingImage}
+            disabled={isUploadingImage}
+          />
         </div>
       </div>
     </div>
