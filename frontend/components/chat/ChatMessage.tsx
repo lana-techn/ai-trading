@@ -71,12 +71,13 @@ export default function ChatMessage({ type, content, timestamp, isLoading, image
         </div>
         
         {imageUrl && (
-          <div className="mb-3">
+          <div className="mb-3 bg-muted/30 p-2 rounded-lg">
             <img 
               src={imageUrl} 
               alt="Uploaded chart" 
-              className="max-w-md w-full rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow"
+              className="w-full max-w-lg rounded-lg border-2 border-primary/20 shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
             />
+            <p className="text-xs text-muted-foreground mt-2 italic">Chart uploaded for analysis</p>
           </div>
         )}
         

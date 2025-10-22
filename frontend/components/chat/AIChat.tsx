@@ -192,6 +192,7 @@ interface ChatMessage {
   actions?: Array<Record<string, unknown>>;
   isLoading?: boolean;
   imageFilename?: string;
+  imageUrl?: string;
   imageAnalysis?: Record<string, unknown>;
 }
 
@@ -307,13 +308,17 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
     setIsImageUploading(true);
     setShowImageUpload(false);
 
+    // Create object URL for image preview
+    const imageUrl = URL.createObjectURL(file);
+
     // Add user message for image upload
     const userMessage: ChatMessage = {
       id: `user_${Date.now()}`,
       type: 'image',
-      message: `Uploaded chart image: ${file.name}`,
+      message: `📊 Uploaded chart image${additionalContext ? ': ' + additionalContext : ''}`,
       timestamp: new Date().toISOString(),
-      imageFilename: file.name
+      imageFilename: file.name,
+      imageUrl
     };
 
     const loadingMessage: ChatMessage = {
@@ -459,6 +464,17 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
                 ? "bg-primary text-primary-foreground" 
                 : "bg-muted text-foreground border border-border"
             )}>
+              {/* Image Preview */}
+              {message.imageUrl && (
+                <div className="mb-3">
+                  <img 
+                    src={message.imageUrl} 
+                    alt="Uploaded chart" 
+                    className="w-full rounded-lg border border-border/50 shadow-sm"
+                  />
+                </div>
+              )}
+              
               <div className="text-sm leading-relaxed">
                 {message.isLoading ? (
                   <div className="flex items-center gap-2">
