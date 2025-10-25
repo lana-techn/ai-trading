@@ -37,6 +37,7 @@ const mobileNavigation = [
   { name: 'Charts', href: '/charts', icon: ChartBarIcon },
   { name: 'Tutorials', href: '/tutorials', icon: BookOpenIcon },
   { name: 'AI Analysis', href: '/analysis', icon: SparklesIcon },
+  { name: 'Analytics & Results', href: '/analytics-results', icon: ChartBarIcon },
   { name: 'AI Chat', href: '/chat', icon: ChatBubbleLeftRightIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ];
@@ -66,6 +67,7 @@ const desktopNavigation = [
     items: [
       { name: 'Tutorials', href: '/tutorials', icon: BookOpenIcon, description: 'Step-by-step trading guides' },
       { name: 'AI Analysis', href: '/analysis', icon: SparklesIcon, description: 'AI-powered market insights' },
+      { name: 'Analytics & Results', href: '/analytics-results', icon: ChartBarIcon, description: 'Platform performance & research data' },
     ]
   },
   { 
