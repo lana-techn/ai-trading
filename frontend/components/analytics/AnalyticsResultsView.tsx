@@ -8,6 +8,7 @@ import {
   CheckCircleIcon,
   ArrowTrendingUpIcon,
   SparklesIcon,
+  BeakerIcon,
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils';
 const OverviewSection = lazy(() => import('./sections/OverviewSection'));
 const ResearchSection = lazy(() => import('./sections/ResearchSection'));
 const ObjectivesSection = lazy(() => import('./sections/ObjectivesSection'));
+const MethodologySection = lazy(() => import('./sections/MethodologySection'));
 const ResultsSection = lazy(() => import('./sections/ResultsSection'));
 const InnovationSection = lazy(() => import('./sections/InnovationSection'));
 
@@ -34,12 +36,13 @@ function SectionSkeleton() {
   );
 }
 
-type TabType = 'overview' | 'research' | 'objectives' | 'results' | 'innovation';
+type TabType = 'overview' | 'research' | 'objectives' | 'methodology' | 'results' | 'innovation';
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: ChartBarIcon },
   { id: 'research', label: 'Research Questions', icon: LightBulbIcon },
   { id: 'objectives', label: 'Objectives', icon: CheckCircleIcon },
+  { id: 'methodology', label: 'Methodology', icon: BeakerIcon },
   { id: 'results', label: 'Key Results', icon: ArrowTrendingUpIcon },
   { id: 'innovation', label: 'Innovation', icon: SparklesIcon },
 ] as const;
@@ -55,6 +58,8 @@ export default function AnalyticsResultsView() {
         return <ResearchSection />;
       case 'objectives':
         return <ObjectivesSection />;
+      case 'methodology':
+        return <MethodologySection />;
       case 'results':
         return <ResultsSection />;
       case 'innovation':
@@ -75,7 +80,7 @@ export default function AnalyticsResultsView() {
               <ChartBarIcon className="h-10 w-10 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold text-foreground mb-3">
                 Analysis & Results
               </h1>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl">
