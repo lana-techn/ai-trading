@@ -2,7 +2,6 @@
 
 Platform analisis trading bertenaga AI dengan Next.js frontend dan NestJS backend.
 
-> 📊 **[Lihat Presentation & Poster Lomba](./PRESENTATION_AND_POSTER.md)** - Dokumentasi lengkap untuk kompetisi dengan ABSTRACT, METHODOLOGY, ANALYSIS, COMMERCIALIZATION, LEARNING & EDUCATION, dan USEFULNESS.
 
 ## 🚀 Quick Start
 
@@ -205,4 +204,3 @@ This project is licensed under the MIT License.
 
 ---
 
-**Happy trading!** 📈✨
