@@ -159,4 +159,54 @@ export class AgentRouterService {
     }
     return 'chat';
   }
+
+  async analyzeChartImage(
+    imageBuffer: Buffer,
+    mimeType: string,
+    additionalContext?: string,
+  ): Promise<any> {
+    this.logger.log('Routing chart image analysis to Qwen Vision (via OpenRouter)');
+
+    try {
+      // Use Qwen Vision via OpenRouter (more reliable and better for charts)
+      const result = await this.qwenService.analyzeChartImage(
+        imageBuffer,
+        mimeType,
+        additionalContext,
+      );
+
+      // If Qwen fails, fallback to Gemini
+      if (!result.success) {
+        this.logger.warn('Qwen Vision failed, trying Gemini Vision as fallback');
+        const geminiResult = await this.geminiService.analyzeChartImage(
+          imageBuffer,
+          mimeType,
+          additionalContext,
+        );
+        return geminiResult;
+      }
+
+      return result;
+    } catch (error) {
+      this.logger.error('Chart image analysis error:', error);
+      
+      // Try Gemini as last resort
+      try {
+        this.logger.log('Attempting Gemini Vision as final fallback');
+        const geminiResult = await this.geminiService.analyzeChartImage(
+          imageBuffer,
+          mimeType,
+          additionalContext,
+        );
+        return geminiResult;
+      } catch (geminiError) {
+        this.logger.error('All vision models failed:', geminiError);
+        return {
+          success: false,
+          analysis: '',
+          error: `All vision models failed. Primary: ${(error as Error).message}`,
+        };
+      }
+    }
+  }
 }
