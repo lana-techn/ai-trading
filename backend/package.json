@@ -12,7 +12,8 @@
     "format": "prettier --write \"src/**/*.{ts,js,json,graphql}\"",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "test:image": "npx ts-node -r tsconfig-paths/register src/scripts/test-image-analysis.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
