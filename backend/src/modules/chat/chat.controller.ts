@@ -68,7 +68,15 @@ export class ChatController {
         throw new HttpException('File is required', HttpStatus.BAD_REQUEST);
       }
 
-      const analysis = await this.chatService.analyzeImage(file.originalname ?? 'chart.png', additionalContext);
+      this.logger.log(`Received image upload: ${file.originalname}, size: ${file.size} bytes, type: ${file.mimetype}`);
+
+      const analysis = await this.chatService.analyzeImage(
+        file.buffer,
+        file.mimetype,
+        file.originalname ?? 'chart.png',
+        additionalContext,
+      );
+      
       return {
         ...analysis,
         session_id: sessionId,

@@ -95,39 +95,137 @@ export class ChatService {
     return session.messages.slice(-limit);
   }
 
-  async analyzeImage(filename: string, context: string) {
-    const signal = context.toLowerCase().includes('bull') ? 'BUY' : 'HOLD';
-    const confidence = 60 + Math.random() * 30;
+  async analyzeImage(imageBuffer: Buffer, mimeType: string, filename: string, context: string) {
+    try {
+      this.logger.log(`Starting image analysis for: ${filename}`);
+      
+      // Use Gemini Vision for real chart analysis
+      const visionAnalysis = await this.agentRouter.analyzeChartImage(imageBuffer, mimeType, context);
 
+      if (!visionAnalysis.success) {
+        this.logger.error(`Vision analysis failed: ${visionAnalysis.error}`);
+        return this.createFallbackImageAnalysis(filename, context);
+      }
+
+      const signal = visionAnalysis.tradingSignal || 'HOLD';
+      const confidence = visionAnalysis.confidence || 50;
+
+      // Format a clean response
+      const responseText = `📊 **Chart Analysis Complete**
+
+**Trading Signal:** ${signal}
+**Confidence Level:** ${confidence}%
+${visionAnalysis.symbolDetected ? `**Symbol Detected:** ${visionAnalysis.symbolDetected}` : ''}
+${visionAnalysis.timeframeDetected ? `**Timeframe:** ${visionAnalysis.timeframeDetected}` : ''}
+
+**Analysis Summary:**
+${visionAnalysis.analysis}
+
+${visionAnalysis.keyInsights && visionAnalysis.keyInsights.length > 0 
+  ? `\n**Key Insights:**\n${visionAnalysis.keyInsights.map((insight: string) => `• ${insight}`).join('\n')}`
+  : ''}`;
+
+      return {
+        success: true,
+        message: 'Image analysis completed successfully',
+        analysis: {
+          trading_signal: signal,
+          confidence_score: confidence / 100,
+          symbol_detected: visionAnalysis.symbolDetected || this.extractSymbol(context) || 'UNKNOWN',
+          timeframe_detected: visionAnalysis.timeframeDetected,
+          analysis_summary: visionAnalysis.analysis.substring(0, 500) + '...',
+          detailed_analysis: visionAnalysis.analysis,
+          key_insights: visionAnalysis.keyInsights || [],
+          technical_indicators: visionAnalysis.technicalIndicators || {},
+          support_levels: visionAnalysis.technicalIndicators?.support || [],
+          resistance_levels: visionAnalysis.technicalIndicators?.resistance || [],
+          risk_level: confidence > 75 ? 'low' : confidence > 50 ? 'medium' : 'high',
+          risk_factors: this.determineRiskFactors(confidence, visionAnalysis),
+          processing_time_ms: 0,
+          model_used: 'gemini-vision',
+        },
+        response: responseText,
+        image_filename: filename,
+        suggestions: this.generateSuggestions(visionAnalysis.symbolDetected, signal),
+        timestamp: Date.now(),
+      };
+    } catch (error) {
+      this.logger.error('Image analysis error:', error);
+      return this.createFallbackImageAnalysis(filename, context);
+    }
+  }
+
+  private createFallbackImageAnalysis(filename: string, context: string) {
     return {
       success: true,
-      message: 'Image analysis completed',
+      message: 'Image analysis completed (fallback mode)',
       analysis: {
-        trading_signal: signal,
-        confidence_score: confidence / 100,
+        trading_signal: 'HOLD',
+        confidence_score: 0.5,
         symbol_detected: this.extractSymbol(context) ?? 'UNKNOWN',
-        analysis_summary: 'Chart pattern suggests consolidating structure with breakout potential.',
-        key_insights: ['Price is oscillating within a tight range', 'Volume remains neutral'],
-        technical_indicators: {
-          support: 'Identified near recent lows',
-          resistance: 'Aligned with previous highs',
-        },
-        risk_level: confidence > 80 ? 'medium' : 'low',
+        analysis_summary: 'Chart analysis is currently unavailable. Please try again or provide more context.',
+        key_insights: ['Unable to process image at this time', 'Please ensure image is clear and well-lit'],
+        technical_indicators: {},
+        support_levels: [],
+        resistance_levels: [],
+        risk_level: 'high',
+        risk_factors: ['Analysis unavailable'],
+        processing_time_ms: 0,
+        model_used: 'fallback',
       },
-      response: `📊 **Chart Analysis Complete**
+      response: `⚠️ **Chart Analysis - Limited Mode**
 
-**Signal:** ${signal}
-**Confidence:** ${confidence.toFixed(0)}%
+Unable to fully analyze the chart image. Please ensure:
+- Image is clear and readable
+- Chart shows visible price action and indicators
+- Try uploading again or provide additional context
 
-Keep monitoring key support and resistance levels before entering.`,
+**Status:** ${context || 'No additional context provided'}`,
       image_filename: filename,
-      suggestions: [
-        'Explain the resistance level details',
-        'What catalysts could move this symbol?',
-        'Show me recent performance metrics',
-      ],
+      suggestions: ['Try uploading a clearer image', 'Add context about the timeframe', 'Specify the symbol'],
       timestamp: Date.now(),
     };
+  }
+
+  private determineRiskFactors(confidence: number, analysis: any): string[] {
+    const factors: string[] = [];
+    
+    if (confidence < 60) {
+      factors.push('Low confidence in signal');
+    }
+    
+    if (analysis.technicalIndicators?.patterns?.length > 0) {
+      factors.push('Multiple patterns detected - requires careful analysis');
+    }
+    
+    if (!analysis.symbolDetected) {
+      factors.push('Symbol not clearly identified');
+    }
+    
+    return factors.length > 0 ? factors : ['Normal market risk'];
+  }
+
+  private generateSuggestions(symbol?: string, signal?: string): string[] {
+    const suggestions = [
+      'Show me the full technical analysis',
+      'What are the key support and resistance levels?',
+      'Explain the risk factors in detail',
+    ];
+    
+    if (symbol) {
+      suggestions.unshift(`Get real-time data for ${symbol}`);
+      suggestions.push(`Show me recent news about ${symbol}`);
+    }
+    
+    if (signal === 'BUY') {
+      suggestions.push('What is the optimal entry point?');
+      suggestions.push('Suggest stop-loss levels');
+    } else if (signal === 'SELL') {
+      suggestions.push('What is the target price?');
+      suggestions.push('When should I exit this position?');
+    }
+    
+    return suggestions.slice(0, 5);
   }
 
   private getSession(sessionId: string): SessionMemory {
