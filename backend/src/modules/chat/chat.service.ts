@@ -97,10 +97,46 @@ export class ChatService {
 
   async analyzeImage(imageBuffer: Buffer, mimeType: string, filename: string, context: string) {
     try {
-      this.logger.log(`Starting image analysis for: ${filename}`);
+      const startTime = Date.now();
+      this.logger.log(`📸 Starting analysis for: ${filename} (${(imageBuffer.length / 1024).toFixed(1)}KB)`);
+      
+      // Smart image optimization - balance between size and quality
+      let optimizedBuffer = imageBuffer;
+      try {
+        const sharp = require('sharp');
+        const metadata = await sharp(imageBuffer).metadata();
+        
+        // Only optimize if image is large enough to benefit
+        if (imageBuffer.length > 200 * 1024 || (metadata.width && metadata.width > 1024)) {
+          optimizedBuffer = await sharp(imageBuffer)
+            .resize(1024, 768, { 
+              fit: 'inside', 
+              withoutEnlargement: true,
+              kernel: 'nearest' // Faster resize algorithm
+            })
+            .jpeg({ 
+              quality: 80, 
+              mozjpeg: true // Better compression
+            })
+            .toBuffer();
+          this.logger.log(`⚡ Optimized: ${imageBuffer.length} → ${optimizedBuffer.length} bytes (${((1 - optimizedBuffer.length/imageBuffer.length) * 100).toFixed(1)}% smaller)`);
+        } else {
+          this.logger.log(`✓ Image already optimal (${imageBuffer.length} bytes)`);
+          optimizedBuffer = imageBuffer;
+        }
+      } catch (err) {
+        this.logger.warn('Optimization skipped:', err);
+        optimizedBuffer = imageBuffer;
+      }
+      
+      const beforeAI = Date.now();
+      this.logger.log(`⏱️  Image prep took ${beforeAI - startTime}ms, sending to AI...`);
       
       // Use Gemini Vision for real chart analysis
-      const visionAnalysis = await this.agentRouter.analyzeChartImage(imageBuffer, mimeType, context);
+      const visionAnalysis = await this.agentRouter.analyzeChartImage(optimizedBuffer, mimeType, context);
+      
+      const aiTime = Date.now() - beforeAI;
+      this.logger.log(`🤖 AI processing took ${aiTime}ms`);
 
       if (!visionAnalysis.success) {
         this.logger.error(`Vision analysis failed: ${visionAnalysis.error}`);
@@ -111,7 +147,10 @@ export class ChatService {
       const confidence = visionAnalysis.confidence || 50;
 
       // Format a clean response
-      const responseText = `📊 **Chart Analysis Complete**
+      const processingTime = Date.now() - startTime;
+      const isCached = visionAnalysis.fromCache;
+      
+      const responseText = `📊 **Chart Analysis Complete** ${isCached ? '⚡ (Cached)' : ''}
 
 **Trading Signal:** ${signal}
 **Confidence Level:** ${confidence}%
@@ -123,7 +162,9 @@ ${visionAnalysis.analysis}
 
 ${visionAnalysis.keyInsights && visionAnalysis.keyInsights.length > 0 
   ? `\n**Key Insights:**\n${visionAnalysis.keyInsights.map((insight: string) => `• ${insight}`).join('\n')}`
-  : ''}`;
+  : ''}
+
+_Analysis completed in ${processingTime}ms${isCached ? ' (from cache)' : ''}_`;
 
       return {
         success: true,
@@ -141,8 +182,9 @@ ${visionAnalysis.keyInsights && visionAnalysis.keyInsights.length > 0
           resistance_levels: visionAnalysis.technicalIndicators?.resistance || [],
           risk_level: confidence > 75 ? 'low' : confidence > 50 ? 'medium' : 'high',
           risk_factors: this.determineRiskFactors(confidence, visionAnalysis),
-          processing_time_ms: 0,
-          model_used: 'gemini-vision',
+          processing_time_ms: processingTime,
+          model_used: isCached ? 'gemini-vision (cached)' : 'gemini-vision',
+          from_cache: isCached,
         },
         response: responseText,
         image_filename: filename,
