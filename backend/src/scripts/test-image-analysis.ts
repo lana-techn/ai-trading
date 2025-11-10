@@ -60,9 +60,9 @@ async function testImageAnalysis() {
       
       console.log(`✓ Image loaded: ${(imageBuffer.length / 1024).toFixed(2)} KB`);
       console.log(`✓ MIME type: ${mimeType}`);
-      console.log('\n🤖 Sending to AI Vision (Qwen via OpenRouter with Gemini fallback)...\n');
+      console.log('\n🤖 Sending to Gemini Vision (with Qwen fallback if needed)...\n');
 
-      // Perform analysis using AgentRouter (will use Qwen Vision first, Gemini as fallback)
+      // Perform analysis using AgentRouter (will use Gemini Vision first, Qwen as fallback)
       const startTime = Date.now();
       const result = await agentRouter.analyzeChartImage(
         imageBuffer,
