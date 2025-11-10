@@ -204,11 +204,16 @@ export default function ImageUpload({
             />
             {currentUploading && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
-                  <span className="text-white text-sm">
-                    {enableSupabaseUpload ? 'Uploading to database...' : 'Analyzing chart...'}
-                  </span>
+                <div className="flex flex-col items-center gap-3 text-center px-4">
+                  <div className="animate-spin rounded-full h-10 w-10 border-3 border-primary border-t-transparent" />
+                  <div className="text-white space-y-1">
+                    <div className="text-sm font-medium">
+                      {enableSupabaseUpload ? 'Uploading to database...' : 'AI Analysis in Progress...'}
+                    </div>
+                    <div className="text-xs opacity-80">
+                      {enableSupabaseUpload ? 'Saving to cloud storage' : '⚡ Optimizing • 📊 Analyzing patterns'}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

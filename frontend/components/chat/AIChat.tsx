@@ -324,7 +324,7 @@ export default function AITradingChat({ className, initialMessage }: AITradingCh
     const loadingMessage: ChatMessage = {
       id: `ai_${Date.now()}`,
       type: 'ai',
-      message: '🔍 Analyzing your chart image with AI... This may take a moment.',
+      message: '🔍 Analyzing chart with AI vision...\n⚡ Optimizing image...\n📊 Detecting patterns and signals...',
       timestamp: new Date().toISOString(),
       isLoading: true,
     };
