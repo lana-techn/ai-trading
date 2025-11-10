@@ -92,7 +92,7 @@ export default function TradingSidebar({
           const symbolsList = popularSymbols.map(s => s.symbol);
           const quotesData = await tradingApi.getMultipleQuotes(symbolsList);
           setQuotes(quotesData);
-          console.log('📊 Market data refreshed at', new Date().toLocaleTimeString());
+          // Market data refreshed successfully
         } catch (error) {
           console.error('Error refreshing quotes:', error);
         }
