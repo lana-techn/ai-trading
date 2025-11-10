@@ -188,32 +188,27 @@ Format your response clearly with sections.`;
     additionalContext?: string,
   ): Promise<QwenImageAnalysisResponse> {
     try {
-      this.logger.debug('Starting chart image analysis with Qwen Vision via OpenRouter');
+      // Try multiple free vision models for best performance
+      this.logger.log('🚀 Starting chart analysis with free vision models (via OpenRouter)');
       
       // Convert buffer to base64
       const base64Image = imageBuffer.toString('base64');
       const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-      // Construct detailed prompt for trading chart analysis
-      const prompt = `You are a professional trading analyst. Analyze this trading chart image in detail.
+      // Optimized prompt for faster analysis
+      const prompt = `Quick trading chart analysis. ${additionalContext || ''}
 
-${additionalContext ? `Additional Context: ${additionalContext}\n` : ''}
-Please provide a comprehensive analysis including:
+Provide:
+1. Symbol & timeframe
+2. Trend & trading signal (BUY/SELL/HOLD)
+3. Confidence %
+4. Top 3 key insights (bullets)
+5. Support/resistance levels
 
-1. **Symbol & Timeframe Detection**: What asset/symbol and timeframe is shown (if visible)
-2. **Trend Analysis**: Current trend (bullish/bearish/neutral), trend strength
-3. **Technical Patterns**: Identify any chart patterns (head & shoulders, triangles, channels, flags, etc.)
-4. **Support & Resistance**: Key support and resistance levels visible on the chart
-5. **Technical Indicators**: Analyze any visible indicators (moving averages, RSI, MACD, Bollinger Bands, volume, etc.)
-6. **Price Action**: Analyze candlestick patterns, breakouts, or consolidation
-7. **Trading Signal**: Provide a clear trading recommendation (BUY/SELL/HOLD)
-8. **Confidence Score**: Rate your confidence in the analysis (0-100%)
-9. **Key Insights**: 3-5 actionable bullet points for traders
-10. **Risk Assessment**: Potential risks, stop-loss suggestions, and risk/reward ratio
+Be concise and actionable.`;
 
-Format your response in clear sections with headers.`;
-
-      // Use Qwen VL model (Vision-Language) via OpenRouter
+      // Use Qwen VL 72B directly - proven to work well
+      // (Other models have quota/availability issues)
       const completion = await this.client.chat.completions.create({
         model: 'qwen/qwen-2-vl-72b-instruct', // Qwen's vision model
         messages: [

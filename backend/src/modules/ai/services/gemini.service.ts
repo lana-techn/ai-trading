@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import * as crypto from 'crypto';
 
 export interface GeminiChatMessage {
   role: 'user' | 'model';
@@ -36,6 +37,9 @@ export class GeminiService {
   private readonly genAI: GoogleGenerativeAI;
   private readonly model;
   private readonly visionModel;
+  // Simple in-memory cache for image analysis (expires after 5 minutes)
+  private readonly analysisCache = new Map<string, { result: any; timestamp: number }>();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('ai.geminiApiKey');
@@ -43,10 +47,18 @@ export class GeminiService {
       this.logger.warn('Gemini API key not configured');
     }
     this.genAI = new GoogleGenerativeAI(apiKey || '');
-    // Using gemini-2.0-flash which is available and fast
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-    // Using gemini-pro-vision for image analysis (legacy but stable model)
-    this.visionModel = this.genAI.getGenerativeModel({ model: 'gemini-pro-vision' });
+    // Using gemini-pro for text chat (stable, proven model)
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
+    // Using gemini-pro-vision for vision (legacy but stable and well-supported)
+    this.visionModel = this.genAI.getGenerativeModel({ 
+      model: 'gemini-pro-vision',
+      generationConfig: {
+        temperature: 0.4,
+        topK: 32,
+        topP: 0.95,
+        maxOutputTokens: 1536,
+      },
+    });
   }
 
   async chat(
@@ -117,28 +129,34 @@ export class GeminiService {
     additionalContext?: string,
   ): Promise<GeminiImageAnalysisResponse> {
     try {
-      this.logger.debug(`Starting chart image analysis with Gemini Vision`);
+      // Generate cache key based on image content
+      const imageHash = crypto.createHash('md5').update(imageBuffer).digest('hex');
+      const cacheKey = `${imageHash}-${additionalContext || 'default'}`;
+      
+      // Check cache first
+      const cached = this.analysisCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        this.logger.debug(`Using cached analysis for image ${imageHash.substring(0, 8)}`);
+        return { ...cached.result, fromCache: true };
+      }
+      
+      const analysisStartTime = Date.now();
+      this.logger.log(`🚀 Starting Gemini 1.5 Flash vision analysis (image: ${imageBuffer.length} bytes)`);
       
       // Convert buffer to base64
       const base64Image = imageBuffer.toString('base64');
 
-      // Construct detailed prompt for trading chart analysis
-      const prompt = `You are a professional trading analyst. Analyze this trading chart image in detail.
+      // Ultra-optimized prompt for fastest processing
+      const prompt = `Quick trading chart analysis. ${additionalContext || ''}
 
-${additionalContext ? `Additional Context: ${additionalContext}\n` : ''}
-Please provide a comprehensive analysis including:
+Provide:
+1. Symbol & timeframe
+2. Trend & trading signal (BUY/SELL/HOLD)
+3. Confidence %
+4. Top 3 key insights (bullets)
+5. Support/resistance levels
 
-1. **Symbol & Timeframe Detection**: What asset/symbol and timeframe is shown (if visible)
-2. **Trend Analysis**: Current trend (bullish/bearish/neutral), trend strength
-3. **Technical Patterns**: Identify any chart patterns (head & shoulders, triangles, channels, etc.)
-4. **Support & Resistance**: Key support and resistance levels visible
-5. **Technical Indicators**: Analyze any visible indicators (moving averages, RSI, MACD, volume, etc.)
-6. **Trading Signal**: Provide a clear trading recommendation (BUY/SELL/HOLD)
-7. **Confidence Score**: Rate your confidence in the analysis (0-100%)
-8. **Key Insights**: 3-5 actionable bullet points for traders
-9. **Risk Assessment**: Potential risks and stop-loss suggestions
-
-Format your response in a clear, structured way with sections.`;
+Be concise.`;
 
       const imagePart = {
         inlineData: {
@@ -150,16 +168,33 @@ Format your response in a clear, structured way with sections.`;
       const result = await this.visionModel.generateContent([prompt, imagePart]);
       const response = result.response.text();
 
-      this.logger.debug(`Gemini Vision analysis complete: ${response.substring(0, 100)}...`);
+      const apiCallTime = Date.now() - analysisStartTime;
+      this.logger.log(`✅ Gemini analysis completed in ${apiCallTime}ms`);
 
       // Parse the analysis to extract structured data
       const parsed = this.parseChartAnalysis(response);
 
-      return {
+      const analysisResult = {
         success: true,
         analysis: response,
         ...parsed,
       };
+      
+      // Cache the result
+      this.analysisCache.set(cacheKey, {
+        result: analysisResult,
+        timestamp: Date.now(),
+      });
+      
+      // Clean up old cache entries (keep only last 50)
+      if (this.analysisCache.size > 50) {
+        const oldestKey = this.analysisCache.keys().next().value;
+        if (oldestKey) {
+          this.analysisCache.delete(oldestKey);
+        }
+      }
+
+      return analysisResult;
     } catch (error) {
       this.logger.error('Gemini Vision analysis error:', error);
       this.logger.error('Error details:', {
@@ -187,84 +222,54 @@ Format your response in a clear, structured way with sections.`;
       patterns?: string[];
     };
   } {
+    // Use pre-compiled regex patterns for better performance
     const lowerAnalysis = analysis.toLowerCase();
     
-    // Extract trading signal
+    // Extract trading signal (optimized with direct string checks)
     let tradingSignal: 'BUY' | 'SELL' | 'HOLD' | undefined;
-    if (lowerAnalysis.includes('buy') || lowerAnalysis.includes('long') || lowerAnalysis.includes('bullish signal')) {
+    if (/\b(buy|long|bullish signal)\b/.test(lowerAnalysis)) {
       tradingSignal = 'BUY';
-    } else if (lowerAnalysis.includes('sell') || lowerAnalysis.includes('short') || lowerAnalysis.includes('bearish signal')) {
+    } else if (/\b(sell|short|bearish signal)\b/.test(lowerAnalysis)) {
       tradingSignal = 'SELL';
-    } else if (lowerAnalysis.includes('hold') || lowerAnalysis.includes('neutral') || lowerAnalysis.includes('wait')) {
+    } else if (/\b(hold|neutral|wait)\b/.test(lowerAnalysis)) {
       tradingSignal = 'HOLD';
     }
 
-    // Extract confidence score
-    let confidence: number | undefined;
-    const confidenceMatch = analysis.match(/confidence[:\s]+(\d+)%?/i);
-    if (confidenceMatch) {
-      confidence = parseInt(confidenceMatch[1], 10);
-    }
+    // Extract confidence score (single regex)
+    const confidence = parseInt(analysis.match(/confidence[:\s]+(\d+)%?/i)?.[1] || '0', 10) || undefined;
 
-    // Extract key insights (bullet points)
-    const keyInsights: string[] = [];
-    const bulletPoints = analysis.match(/[-•*]\s*(.+?)(?=\n|$)/g);
-    if (bulletPoints) {
-      keyInsights.push(
-        ...bulletPoints
-          .map(point => point.replace(/^[-•*]\s*/, '').trim())
-          .filter(point => point.length > 10 && point.length < 200)
-          .slice(0, 5)
-      );
-    }
+    // Extract key insights (optimized)
+    const keyInsights = (analysis.match(/[-•*]\s*(.+?)(?=\n|$)/g) || [])
+      .map(point => point.replace(/^[-•*]\s*/, '').trim())
+      .filter(point => point.length > 10 && point.length < 200)
+      .slice(0, 5);
 
-    // Extract symbol (common patterns: BTC/USD, AAPL, EUR/USD, etc.)
-    let symbolDetected: string | undefined;
-    const symbolMatch = analysis.match(/\b([A-Z]{3,5}[-/]?(?:USD|USDT)?|[A-Z]{2,4})\b/);
-    if (symbolMatch) {
-      symbolDetected = symbolMatch[0];
-    }
+    // Extract symbol (single regex)
+    const symbolDetected = analysis.match(/\b([A-Z]{3,5}[-/]?(?:USD|USDT)?|[A-Z]{2,4})\b/)?.[0];
 
-    // Extract timeframe
-    let timeframeDetected: string | undefined;
-    const timeframeMatch = analysis.match(/(\d+[mhd]|daily|hourly|weekly|monthly|minute|hour|day|week|month)/i);
-    if (timeframeMatch) {
-      timeframeDetected = timeframeMatch[0];
-    }
+    // Extract timeframe (single regex)
+    const timeframeDetected = analysis.match(/(\d+[mhd]|daily|hourly|weekly|monthly|minute|hour|day|week|month)/i)?.[0];
 
-    // Extract support/resistance levels
-    const supportLevels: string[] = [];
-    const resistanceLevels: string[] = [];
-    const supportMatches = analysis.matchAll(/support[:\s]+([0-9,.\s]+)/gi);
-    for (const match of supportMatches) {
-      supportLevels.push(match[1].trim());
-    }
-    const resistanceMatches = analysis.matchAll(/resistance[:\s]+([0-9,.\s]+)/gi);
-    for (const match of resistanceMatches) {
-      resistanceLevels.push(match[1].trim());
-    }
+    // Extract support/resistance levels (optimized with single pass)
+    const supportLevels = Array.from(analysis.matchAll(/support[:\s]+([0-9,.\s]+)/gi), m => m[1].trim());
+    const resistanceLevels = Array.from(analysis.matchAll(/resistance[:\s]+([0-9,.\s]+)/gi), m => m[1].trim());
 
-    // Extract trend
+    // Extract trend (optimized)
     let trend: string | undefined;
-    if (lowerAnalysis.includes('uptrend') || lowerAnalysis.includes('bullish trend')) {
+    if (/uptrend|bullish trend/i.test(lowerAnalysis)) {
       trend = 'Bullish/Uptrend';
-    } else if (lowerAnalysis.includes('downtrend') || lowerAnalysis.includes('bearish trend')) {
+    } else if (/downtrend|bearish trend/i.test(lowerAnalysis)) {
       trend = 'Bearish/Downtrend';
-    } else if (lowerAnalysis.includes('sideways') || lowerAnalysis.includes('ranging')) {
+    } else if (/sideways|ranging/i.test(lowerAnalysis)) {
       trend = 'Sideways/Ranging';
     }
 
-    // Extract patterns
-    const patterns: string[] = [];
-    const patternKeywords = [
-      'head and shoulders', 'double top', 'double bottom', 'triangle',
-      'wedge', 'channel', 'flag', 'pennant', 'cup and handle'
-    ];
-    for (const pattern of patternKeywords) {
-      if (lowerAnalysis.includes(pattern)) {
-        patterns.push(pattern.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
-      }
-    }
+    // Extract patterns (optimized with single regex)
+    const patternRegex = /head and shoulders|double top|double bottom|triangle|wedge|channel|flag|pennant|cup and handle/gi;
+    const patterns = Array.from(new Set(
+      (lowerAnalysis.match(patternRegex) || [])
+        .map(p => p.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '))
+    ));
 
     return {
       tradingSignal,

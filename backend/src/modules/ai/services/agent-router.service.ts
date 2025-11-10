@@ -165,26 +165,28 @@ export class AgentRouterService {
     mimeType: string,
     additionalContext?: string,
   ): Promise<any> {
-    this.logger.log('Routing chart image analysis to Qwen Vision (via OpenRouter)');
+    this.logger.log('⚡ Using Qwen Vision for chart analysis (reliable and detailed)');
 
     try {
-      // Use Qwen Vision via OpenRouter (more reliable and better for charts)
-      const result = await this.qwenService.analyzeChartImage(
+      // Use Qwen Vision as primary - proven to work well with detailed analysis
+      const qwenResult = await this.qwenService.analyzeChartImage(
         imageBuffer,
         mimeType,
         additionalContext,
       );
 
-      // If Qwen fails, fallback to Gemini
-      if (!result.success) {
-        this.logger.warn('Qwen Vision failed, trying Gemini Vision as fallback');
-        const geminiResult = await this.geminiService.analyzeChartImage(
-          imageBuffer,
-          mimeType,
-          additionalContext,
-        );
-        return geminiResult;
+      // If Qwen succeeds, return immediately
+      if (qwenResult.success) {
+        return qwenResult;
       }
+
+      // Only try Gemini if Qwen fails
+      this.logger.warn('Qwen failed, trying Gemini Vision as fallback');
+      const result = await this.geminiService.analyzeChartImage(
+        imageBuffer,
+        mimeType,
+        additionalContext,
+      );
 
       return result;
     } catch (error) {
