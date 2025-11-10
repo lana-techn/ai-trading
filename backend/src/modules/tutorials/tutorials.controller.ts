@@ -64,11 +64,11 @@ export class TutorialsController {
     }
   }
 
-  @Get(':id/related')
-  async related(@Param('id') id: string, @Query('limit') limit = '3') {
+  @Get(':slug/related')
+  async related(@Param('slug') slug: string, @Query('limit') limit = '3') {
     try {
       const parsedLimit = Math.min(Number(limit) || 3, 10);
-      const tutorials = await this.tutorialsService.getRelatedTutorials(id, parsedLimit);
+      const tutorials = await this.tutorialsService.getRelatedTutorials(slug, parsedLimit);
       return { success: true, tutorials };
     } catch (error) {
       this.logger.error('Error fetching related tutorials:', error);
@@ -76,10 +76,10 @@ export class TutorialsController {
     }
   }
 
-  @Get(':id/analytics')
-  async analytics(@Param('id') id: string) {
+  @Get(':slug/analytics')
+  async analytics(@Param('slug') slug: string) {
     try {
-      const analytics = await this.tutorialsService.getTutorialAnalytics(id);
+      const analytics = await this.tutorialsService.getTutorialAnalytics(slug);
       return { success: Boolean(analytics), analytics };
     } catch (error) {
       this.logger.error('Error fetching analytics:', error);
