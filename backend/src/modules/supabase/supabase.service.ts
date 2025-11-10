@@ -310,10 +310,12 @@ export class SupabaseService implements OnModuleInit {
     }
 
     try {
+      const { filterColumn, identifier } = this.resolveTutorialIdentifier(tutorialId);
+
       const { data: tutorial, error: tutorialError } = await this.supabase
         .from('tutorials')
-        .select('category')
-        .eq('id', tutorialId)
+        .select('id, category')
+        .eq(filterColumn, identifier)
         .single();
 
       if (tutorialError) {
@@ -331,7 +333,7 @@ export class SupabaseService implements OnModuleInit {
         `)
         .eq('status', 'published')
         .eq('category', tutorial.category)
-        .neq('id', tutorialId)
+        .neq('id', tutorial.id)
         .order('published_at', { ascending: false })
         .limit(limit);
 
@@ -353,10 +355,31 @@ export class SupabaseService implements OnModuleInit {
       return null;
     }
 
+    const { filterColumn, identifier, requiresLookup } = this.resolveTutorialIdentifier(tutorialId, true);
+
+    let resolvedTutorialId = tutorialId;
+
+    if (requiresLookup) {
+      const { data: tutorial, error: tutorialError } = await this.supabase
+        .from('tutorials')
+        .select('id')
+        .eq(filterColumn, identifier)
+        .single();
+
+      if (tutorialError) {
+        if (tutorialError.code !== 'PGRST116') {
+          this.logger.error(`Supabase getTutorialAnalytics lookup error: ${tutorialError.message}`, tutorialError);
+        }
+        return null;
+      }
+
+      resolvedTutorialId = tutorial.id;
+    }
+
     const { data, error } = await this.supabase
       .from('tutorial_analytics')
       .select('*')
-      .eq('tutorial_id', tutorialId)
+      .eq('tutorial_id', resolvedTutorialId)
       .is('section_id', null)
       .single();
 
@@ -404,4 +427,25 @@ export class SupabaseService implements OnModuleInit {
       if (error) throw error;
     }
   }
+
+  private resolveTutorialIdentifier(identifier: string, allowLookup = false) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const isUuid = uuidRegex.test(identifier);
+
+    if (isUuid) {
+      return {
+        filterColumn: 'id' as const,
+        identifier,
+        requiresLookup: false,
+      };
+    }
+
+    return {
+      filterColumn: 'slug' as const,
+      identifier,
+      requiresLookup: allowLookup,
+    };
+  }
+
 }
+
