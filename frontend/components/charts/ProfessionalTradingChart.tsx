@@ -120,7 +120,7 @@ export default function ProfessionalTradingChart({
         new Date(a.time).getTime() - new Date(b.time).getTime()
       );
       
-      console.log('🔄 Processed data: Original', chartData.length, 'Unique:', uniqueChartData.length);
+      // Processed and deduplicated chart data
       
       setChartData(uniqueChartData);
       
@@ -165,7 +165,7 @@ export default function ProfessionalTradingChart({
       
       // Fallback to demo data if API fails
       const fallbackData = generateFallbackData(symbol);
-      console.log('🔄 Using fallback data:', fallbackData.length, 'candles');
+      // Using fallback demo data
       setChartData(fallbackData);
       
       // Set state from fallback data
@@ -185,7 +185,7 @@ export default function ProfessionalTradingChart({
   
   // Generate fallback data for demo purposes
   const generateFallbackData = (symbol: string): CandleData[] => {
-    console.log('🔄 Generating fallback data for:', symbol);
+    // Generating fallback demo data
     
     const basePrices: Record<string, number> = {
       'AAPL': 150,

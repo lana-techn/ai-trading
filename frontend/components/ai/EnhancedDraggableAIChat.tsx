@@ -62,17 +62,28 @@ export function EnhancedDraggableAIChat({
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   
-  // Dragging state
+  // Dragging state with enhanced features
   const [isDragging, setIsDragging] = useState(false)
+  const [hasMoved, setHasMoved] = useState(false) // Track if drag actually moved
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [mounted, setMounted] = useState(false)
+  const [isSnapping, setIsSnapping] = useState(false)
+  const [lastClickTime, setLastClickTime] = useState(0)
+  const [velocity, setVelocity] = useState({ x: 0, y: 0 })
+  const [lastPosition, setLastPosition] = useState({ x: 0, y: 0 })
   
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false)
   
   const chatRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<HTMLDivElement>(null)
+  const toggleButtonRef = useRef<HTMLDivElement>(null)
+  const animationFrameRef = useRef<number>()
+  const lastMoveTimeRef = useRef<number>(Date.now())
+  
+  // LocalStorage key for position
+  const POSITION_KEY = `ai-chat-position-${symbol}`
 
   // Detect mobile devices
   useEffect(() => {
@@ -85,11 +96,32 @@ export function EnhancedDraggableAIChat({
     return () => window.removeEventListener('resize', checkIsMobile)
   }, [])
 
-  // Set initial position with better UX and mobile support
+  // Load saved position or set initial position with better UX
   useEffect(() => {
     setMounted(true)
     const updatePosition = () => {
       if (typeof window !== 'undefined') {
+        // Try to load saved position from localStorage
+        const savedPosition = localStorage.getItem(POSITION_KEY)
+        if (savedPosition) {
+          try {
+            const parsed = JSON.parse(savedPosition)
+            // Validate saved position is still within viewport
+            const chatWidth = isOpen ? (isMobile ? 300 : 320) : 64
+            const chatHeight = isOpen ? (isMobile ? 400 : 384) : 64
+            const maxX = window.innerWidth - chatWidth - 10
+            const maxY = window.innerHeight - chatHeight - 10
+            
+            if (parsed.x >= 0 && parsed.x <= maxX && parsed.y >= 0 && parsed.y <= maxY) {
+              setPosition(parsed)
+              return
+            }
+          } catch (e) {
+            // Invalid saved position, use default
+          }
+        }
+        
+        // Use default position if no saved position or invalid
         const defaultX = isMobile ? 20 : window.innerWidth - 400
         const defaultY = isMobile ? window.innerHeight - 100 : window.innerHeight - 550
         
@@ -105,7 +137,7 @@ export function EnhancedDraggableAIChat({
       window.addEventListener('resize', updatePosition)
       return () => window.removeEventListener('resize', updatePosition)
     }
-  }, [initialPosition, isMobile])
+  }, [initialPosition, isMobile, POSITION_KEY, isOpen])
 
   // Generate cache key
   const getCacheKey = useCallback((symbol: string, dataLength: number, lastTimestamp: string) => {
@@ -206,15 +238,50 @@ export function EnhancedDraggableAIChat({
           setInsights(result.insights)
           onAnalysisUpdate?.(result.analysis)
 
-          // Create optimized welcome message
+          // Create enhanced welcome message with better visual structure
+          const trendIcon = result.analysis.trend === 'bullish' ? '🔥' : result.analysis.trend === 'bearish' ? '❄️' : '➡️'
+          const trendText = result.analysis.trend === 'bullish' ? 'BULLISH ↑' : result.analysis.trend === 'bearish' ? 'BEARISH ↓' : 'SIDEWAYS'
+          const trendColor = result.analysis.trend === 'bullish' ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30' : result.analysis.trend === 'bearish' ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30' : 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950/30'
+          
           const welcomeMessage: Message = {
             id: 1,
-            content: `**🚀 AI Analysis Ready!**\n\n` +
-                     `**${symbol}** (${new Date().toLocaleTimeString()})\n` +
-                     `• **Trend**: ${result.analysis.trend === 'bullish' ? '🔥 BULLISH ↑' : result.analysis.trend === 'bearish' ? '❄️ BEARISH ↓' : '➡️ SIDEWAYS'}\n` +
-                     `• **Buy Signal**: ${result.analysis.signals.buy}%\n` +
-                     `• **Price**: $${data[data.length - 1]?.close.toFixed(2)}\n\n` +
-                     `${isMobile ? 'Tap' : 'Click'} quick buttons for instant analysis!`,
+            content: `<div class="space-y-3">
+  <div class="flex items-center gap-2 mb-2">
+    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center">
+      <span class="text-sm">🚀</span>
+    </div>
+    <div>
+      <div class="font-bold text-sm text-gray-900 dark:text-gray-100">AI Analysis Ready!</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">${symbol} • ${new Date().toLocaleTimeString()}</div>
+    </div>
+  </div>
+  
+  <div class="grid grid-cols-1 gap-2">
+    <div class="flex items-center justify-between p-2 rounded-lg ${trendColor} border border-current/20">
+      <div class="flex items-center gap-2">
+        <span class="text-base">${trendIcon}</span>
+        <span class="text-xs font-medium">Trend</span>
+      </div>
+      <span class="text-xs font-bold">${trendText}</span>
+    </div>
+    
+    <div class="grid grid-cols-2 gap-2">
+      <div class="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+        <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Buy Signal</div>
+        <div class="text-sm font-bold text-gray-900 dark:text-gray-100">${result.analysis.signals.buy}%</div>
+      </div>
+      
+      <div class="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+        <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Price</div>
+        <div class="text-sm font-bold text-gray-900 dark:text-gray-100">$${data[data.length - 1]?.close.toFixed(2)}</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="text-xs text-center text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
+    ${isMobile ? 'Tap' : 'Click'} quick buttons for instant analysis! ⚡
+  </div>
+</div>`,
             sender: "ai",
             timestamp: new Date(),
             isAnalysis: true
@@ -222,12 +289,45 @@ export function EnhancedDraggableAIChat({
 
           setMessages([welcomeMessage])
 
-          // Add top insight as second message
+          // Add top insight as enhanced structured message
           if (result.insights.length > 0) {
             const topInsight = result.insights[0]
+            const impactIcon = topInsight.impact === 'positive' ? '📈' : topInsight.impact === 'negative' ? '📉' : '➡️'
+            const impactColor = topInsight.impact === 'positive' ? 'text-green-600 dark:text-green-400' : topInsight.impact === 'negative' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
+            
             const insightMessage: Message = {
               id: 2,
-              content: `💡 **${topInsight.title}**\n\n${topInsight.description}\n\n**Confidence**: ${topInsight.confidence}% | **Impact**: ${topInsight.impact === 'positive' ? '📈' : topInsight.impact === 'negative' ? '📉' : '➡️'} ${topInsight.impact.toUpperCase()}`,
+              content: `<div class="space-y-3">
+  <div class="flex items-start gap-2 p-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800">
+    <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+      <span class="text-sm">💡</span>
+    </div>
+    <div class="flex-1">
+      <div class="font-bold text-sm text-gray-900 dark:text-gray-100 mb-1">${topInsight.title}</div>
+      <p class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">${topInsight.description}</p>
+    </div>
+  </div>
+  
+  <div class="grid grid-cols-2 gap-2">
+    <div class="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+      <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Confidence</div>
+      <div class="flex items-center gap-1">
+        <div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full" style="width: ${topInsight.confidence}%"></div>
+        </div>
+        <span class="text-xs font-bold text-gray-900 dark:text-gray-100">${topInsight.confidence}%</span>
+      </div>
+    </div>
+    
+    <div class="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+      <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Impact</div>
+      <div class="flex items-center gap-1">
+        <span>${impactIcon}</span>
+        <span class="text-xs font-bold ${impactColor}">${topInsight.impact.toUpperCase()}</span>
+      </div>
+    </div>
+  </div>
+</div>`,
               sender: "ai",
               timestamp: new Date(),
               isAnalysis: true
@@ -249,46 +349,176 @@ export function EnhancedDraggableAIChat({
     performAnalysis()
   }, [symbol, data, autoAnalyze, computeAnalysis, onAnalysisUpdate, isMobile])
 
-  // Enhanced drag functionality with mobile support
+  // Snap to edges with smooth animation
+  const snapToEdge = useCallback((currentX: number, currentY: number) => {
+    if (typeof window === 'undefined') return { x: currentX, y: currentY }
+    
+    const chatWidth = isOpen ? (isMobile ? 300 : 320) : 64
+    const chatHeight = isOpen ? (isMobile ? 400 : 384) : 64
+    const snapThreshold = 50 // Distance from edge to trigger snap
+    
+    let finalX = currentX
+    let finalY = currentY
+    
+    // Snap to left or right edge
+    if (currentX < snapThreshold) {
+      finalX = 10 // Snap to left
+    } else if (currentX > window.innerWidth - chatWidth - snapThreshold) {
+      finalX = window.innerWidth - chatWidth - 10 // Snap to right
+    }
+    
+    // Snap to top or bottom edge
+    if (currentY < snapThreshold) {
+      finalY = 10 // Snap to top
+    } else if (currentY > window.innerHeight - chatHeight - snapThreshold) {
+      finalY = window.innerHeight - chatHeight - 10 // Snap to bottom
+    }
+    
+    return { x: finalX, y: finalY }
+  }, [isOpen, isMobile])
+
+  // Enhanced drag functionality with mobile support and double-click reset
   const handleMouseDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!dragRef.current?.contains((e.target as Node))) return
+    // Allow drag from both header AND floating button
+    const targetNode = e.target as Node
+    const isDragHandle = dragRef.current?.contains(targetNode)
+    const isToggleButton = toggleButtonRef.current?.contains(targetNode)
+    
+    if (!isDragHandle && !isToggleButton) return
     if (isMobile) return // Disable drag on mobile for better touch experience
+    
+    // Handle double-click to reset position (only on drag handle, not toggle button)
+    if (isDragHandle) {
+      const currentTime = Date.now()
+      if (currentTime - lastClickTime < 300) {
+        // Double-click detected - reset to center
+        const defaultX = window.innerWidth / 2 - (isOpen ? 160 : 32)
+        const defaultY = window.innerHeight / 2 - (isOpen ? 192 : 32)
+        setPosition({ x: defaultX, y: defaultY })
+        localStorage.setItem(POSITION_KEY, JSON.stringify({ x: defaultX, y: defaultY }))
+        return
+      }
+      setLastClickTime(currentTime)
+    }
     
     const clientX = 'clientX' in e ? e.clientX : e.touches[0].clientX
     const clientY = 'clientY' in e ? e.clientY : e.touches[0].clientY
     
     setIsDragging(true)
+    setHasMoved(false) // Reset move tracking
+    setLastPosition({ x: clientX, y: clientY })
+    setVelocity({ x: 0, y: 0 })
     setDragStart({
       x: clientX - position.x,
       y: clientY - position.y
     })
+    lastMoveTimeRef.current = Date.now()
     e.preventDefault()
-  }, [position, isMobile])
+    e.stopPropagation()
+  }, [position, isMobile, lastClickTime, isOpen, POSITION_KEY])
 
   const handleMouseMove = useCallback((e: MouseEvent | TouchEvent) => {
     if (!isDragging || isMobile) return
 
+    // Cancel any pending animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+    }
+
     const clientX = 'clientX' in e ? e.clientX : e.touches[0].clientX
     const clientY = 'clientY' in e ? e.clientY : e.touches[0].clientY
 
-    const newX = clientX - dragStart.x
-    const newY = clientY - dragStart.y
+    // Use requestAnimationFrame for smooth 60fps updates
+    animationFrameRef.current = requestAnimationFrame(() => {
+      const newX = clientX - dragStart.x
+      const newY = clientY - dragStart.y
 
-    // Boundary constraints with mobile considerations
-    const chatWidth = isOpen ? (isMobile ? 300 : 320) : 64
-    const chatHeight = isOpen ? (isMobile ? 400 : 384) : 64
-    const maxX = window.innerWidth - chatWidth - 10
-    const maxY = window.innerHeight - chatHeight - 10
+      // Calculate velocity for momentum effect
+      const currentTime = Date.now()
+      const deltaTime = Math.max(1, currentTime - lastMoveTimeRef.current)
+      const velocityX = (clientX - lastPosition.x) / deltaTime * 16 // Normalize to 60fps
+      const velocityY = (clientY - lastPosition.y) / deltaTime * 16
+      
+      // Mark that we've moved (for preventing click on drag)
+      if (Math.abs(velocityX) > 0.1 || Math.abs(velocityY) > 0.1) {
+        setHasMoved(true)
+      }
+      
+      setVelocity({ x: velocityX, y: velocityY })
+      setLastPosition({ x: clientX, y: clientY })
+      lastMoveTimeRef.current = currentTime
 
-    setPosition({
-      x: Math.max(10, Math.min(newX, maxX)),
-      y: Math.max(10, Math.min(newY, maxY))
+      // Boundary constraints with smooth rubber band effect
+      const chatWidth = isOpen ? (isMobile ? 300 : 320) : 64
+      const chatHeight = isOpen ? (isMobile ? 400 : 384) : 64
+      const maxX = window.innerWidth - chatWidth - 10
+      const maxY = window.innerHeight - chatHeight - 10
+
+      // Apply constraints with slight elasticity at edges
+      let finalX = newX
+      let finalY = newY
+      
+      // Rubber band effect when dragging beyond bounds
+      if (newX < 10) {
+        finalX = 10 + (newX - 10) * 0.3 // 30% resistance
+      } else if (newX > maxX) {
+        finalX = maxX + (newX - maxX) * 0.3
+      }
+      
+      if (newY < 10) {
+        finalY = 10 + (newY - 10) * 0.3
+      } else if (newY > maxY) {
+        finalY = maxY + (newY - maxY) * 0.3
+      }
+
+      setPosition({
+        x: Math.max(10, Math.min(finalX, maxX)),
+        y: Math.max(10, Math.min(finalY, maxY))
+      })
     })
-  }, [isDragging, dragStart, isOpen, isMobile])
+  }, [isDragging, dragStart, isOpen, isMobile, lastPosition])
 
   const handleMouseUp = useCallback(() => {
-    setIsDragging(false)
-  }, [])
+    if (isDragging) {
+      // Cancel any pending animation frame
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+      
+      setIsDragging(false)
+      
+      // Apply momentum effect if velocity is high enough
+      const momentumThreshold = 0.5
+      let finalPosition = { x: position.x, y: position.y }
+      
+      if (Math.abs(velocity.x) > momentumThreshold || Math.abs(velocity.y) > momentumThreshold) {
+        // Apply momentum with decay
+        const momentumDecay = 0.15 // How much momentum to apply
+        finalPosition = {
+          x: position.x + velocity.x * momentumDecay,
+          y: position.y + velocity.y * momentumDecay
+        }
+      }
+      
+      // Apply snap to edges
+      setIsSnapping(true)
+      const snappedPosition = snapToEdge(finalPosition.x, finalPosition.y)
+      
+      // Smooth animation to snapped position
+      setPosition(snappedPosition)
+      
+      // Save position to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(POSITION_KEY, JSON.stringify(snappedPosition))
+      }
+      
+      // Reset velocity
+      setVelocity({ x: 0, y: 0 })
+      
+      // Remove snapping state after animation
+      setTimeout(() => setIsSnapping(false), 300)
+    }
+  }, [isDragging, position, velocity, snapToEdge, POSITION_KEY])
 
   // Attach global mouse and touch events
   useEffect(() => {
@@ -396,9 +626,13 @@ export function EnhancedDraggableAIChat({
     }
   }, [analysis, isMobile])
 
-  // Cleanup effect
+  // Cleanup effect for animation frames and cache
   useEffect(() => {
     return () => {
+      // Cancel any pending animation frame
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
       // Clear cache when component unmounts
       // clearIndicatorCache() // Commented out as the module was not found
     }
@@ -408,26 +642,67 @@ export function EnhancedDraggableAIChat({
 
   return (
     <div 
-      className={cn("fixed z-50 transition-all duration-300", className)}
+      className={cn(
+        "fixed z-50",
+        isSnapping ? "transition-all duration-300 ease-out" : isDragging ? "transition-none" : "transition-all duration-200",
+        isDragging && "scale-105 shadow-2xl",
+        className
+      )}
       style={{
         left: position.x,
         top: position.y,
-        cursor: isDragging ? 'grabbing' : 'auto'
+        cursor: isDragging ? 'grabbing' : 'auto',
+        filter: isDragging ? 'drop-shadow(0 20px 25px rgb(0 0 0 / 0.25))' : 'none'
       }}
       ref={chatRef}
     >
-      {/* Enhanced Toggle Button */}
+      {/* Enhanced Toggle Button with better animations and drag support */}
       {!isOpen && (
         <div
-          className={`${themeStyles.toggleButton} ${isMobile ? 'w-14 h-14' : 'w-16 h-16'} rounded-full border-2 shadow-lg flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all duration-200 backdrop-blur-sm`}
-          onClick={() => setIsOpen(true)}
-          title={`AI Analysis for ${symbol}`}
+          ref={toggleButtonRef}
+          className={cn(
+            `${themeStyles.toggleButton} ${isMobile ? 'w-14 h-14' : 'w-16 h-16'} rounded-full border-2 shadow-lg flex items-center justify-center backdrop-blur-sm`,
+            !isMobile && "cursor-grab active:cursor-grabbing",
+            !isDragging && "hover:scale-110 active:scale-95",
+            "transition-all duration-300 hover:shadow-xl",
+            "hover:border-blue-400 dark:hover:border-blue-500",
+            isDragging && "cursor-grabbing"
+          )}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleMouseDown}
+          onClick={(e) => {
+            // Only open if not dragging - prevent click after drag
+            if (!hasMoved) {
+              setIsOpen(true)
+              // Also update position if needed to ensure it's visible
+              if (typeof window !== 'undefined') {
+                const chatWidth = isMobile ? 300 : 320
+                const chatHeight = isMobile ? 400 : 384
+                if (position.x + chatWidth > window.innerWidth || position.y + chatHeight > window.innerHeight) {
+                  const safeX = Math.min(position.x, window.innerWidth - chatWidth - 10)
+                  const safeY = Math.min(position.y, window.innerHeight - chatHeight - 10)
+                  setPosition({ x: safeX, y: safeY })
+                }
+              }
+            }
+            // Reset hasMoved after a short delay
+            setTimeout(() => setHasMoved(false), 100)
+          }}
+          title={!isMobile ? `AI Analysis for ${symbol} • Click to open • Drag to move` : `AI Analysis for ${symbol} • Tap to open`}
         >
           <div className="relative">
-            {getTrendIcon()}
+            <div className={cn(
+              "transition-transform duration-300",
+              insights.length > 0 && "animate-bounce"
+            )}>
+              {getTrendIcon()}
+            </div>
             {insights.length > 0 && (
               <>
-                <div className={`absolute -top-1 -right-1 ${isMobile ? 'w-3 h-3' : 'w-4 h-4'} bg-green-500 rounded-full flex items-center justify-center`}>
+                <div className={cn(
+                  `absolute -top-1 -right-1 ${isMobile ? 'w-3 h-3' : 'w-4 h-4'} bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-md`,
+                  "animate-pulse"
+                )}>
                   <span className="text-xs text-white font-bold">{insights.length}</span>
                 </div>
                 {/* Pulse animation for new insights */}
@@ -443,17 +718,41 @@ export function EnhancedDraggableAIChat({
         <div 
           className={`${themeStyles.container} ${isMobile ? 'w-72' : 'w-80'} ${isMinimized ? 'h-16' : isMobile ? 'h-80' : 'h-96'} rounded-xl border-2 shadow-2xl backdrop-blur-md transition-all duration-300 overflow-hidden`}
         >
-          {/* Header with enhanced drag handle */}
+          {/* Header with enhanced drag handle and visual feedback */}
           <div 
             ref={dragRef}
-            className={`${themeStyles.header} flex items-center justify-between p-3 border-b ${!isMobile ? 'cursor-grab active:cursor-grabbing' : ''} select-none`}
+            className={cn(
+              `${themeStyles.header} flex items-center justify-between p-3 border-b select-none`,
+              !isMobile && 'cursor-grab active:cursor-grabbing hover:bg-opacity-80',
+              isDragging && 'cursor-grabbing bg-opacity-90'
+            )}
             onMouseDown={handleMouseDown}
             onTouchStart={handleMouseDown}
+            title={!isMobile ? "Drag to move • Double-click to center" : ""}
           >
             <div className="flex items-center gap-2">
-              {!isMobile && <GripVertical className="h-4 w-4 opacity-50" />}
-              <Brain className={`${isMobile ? 'h-4 w-4' : 'h-4 w-4'}`} />
-              <span className={`${isMobile ? 'text-sm' : 'text-sm'} font-semibold`}>AI Assistant</span>
+              {!isMobile && (
+                <div className={cn(
+                  "flex flex-col gap-0.5 transition-all duration-200",
+                  isDragging ? "opacity-100 scale-110" : "opacity-50 hover:opacity-100"
+                )}>
+                  <div className="flex gap-0.5">
+                    <div className="w-1 h-1 rounded-full bg-current"></div>
+                    <div className="w-1 h-1 rounded-full bg-current"></div>
+                  </div>
+                  <div className="flex gap-0.5">
+                    <div className="w-1 h-1 rounded-full bg-current"></div>
+                    <div className="w-1 h-1 rounded-full bg-current"></div>
+                  </div>
+                </div>
+              )}
+              <Brain className={cn(
+                `${isMobile ? 'h-4 w-4' : 'h-4 w-4'}`,
+                isDragging && "animate-pulse"
+              )} />
+              <span className={`${isMobile ? 'text-sm' : 'text-sm'} font-semibold`}>
+                AI Assistant {isDragging && "🔄"}
+              </span>
             </div>
             
             <div className="flex items-center gap-1">
@@ -528,7 +827,30 @@ export function EnhancedDraggableAIChat({
                         isLoading={message.isLoading}
                         className={`${themeStyles.message} text-xs ${message.isAnalysis ? 'font-medium' : ''}`}
                       >
-                        {!message.isLoading && message.content}
+                        {!message.isLoading && (
+                          message.content.startsWith('<div') ? (
+                            // Render HTML content for enhanced analysis messages
+                            <div dangerouslySetInnerHTML={{ __html: message.content }} />
+                          ) : (
+                            // Render markdown-formatted text
+                            <div className="space-y-2">
+                              {message.content.split('\n').map((line, idx) => {
+                                // Handle bold text **text**
+                                const parts = line.split(/(\*\*[^*]+\*\*)/g)
+                                return (
+                                  <div key={idx}>
+                                    {parts.map((part, partIdx) => {
+                                      if (part.startsWith('**') && part.endsWith('**')) {
+                                        return <strong key={partIdx}>{part.slice(2, -2)}</strong>
+                                      }
+                                      return <span key={partIdx}>{part}</span>
+                                    })}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )
+                        )}
                       </ChatBubbleMessage>
                     </ChatBubble>
                   ))}
